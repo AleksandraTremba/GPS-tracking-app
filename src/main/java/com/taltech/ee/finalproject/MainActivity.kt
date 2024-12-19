@@ -50,8 +50,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isTracking = false
     private var startLocation: Location? = null
 
-    private var isCentered: Boolean = false
+    private var isCentered: Boolean = true
     private var isNorthUp: Boolean = true // Default to North-Up
+    private var isSatelliteView: Boolean = false
 
     private lateinit var optionsButton: Button
     private lateinit var orientationTextView: TextView
@@ -90,6 +91,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
         isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
         isCentered = sharedPreferences.getBoolean("isCentered", false)
+        isSatelliteView = sharedPreferences.getBoolean("isSatelliteView", true)
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -178,6 +180,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (isCentered) {
             centerMapOnCurrentLocation()
         }
+        mapViewState()
     }
 
     fun updateOrientation(isNorthUp: Boolean) {
@@ -213,6 +216,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (isCentered) {
             centerMapOnCurrentLocation()
+        }
+    }
+
+    fun toggleSatelliteView(isSatelliteView: Boolean) {
+        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putBoolean("isSatelliteView", isSatelliteView).apply()
+
+        if (isSatelliteView) {
+            mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE)
+        } else {
+            mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL)
+        }
+    }
+
+    fun mapViewState() {
+        if (isSatelliteView) {
+            mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE)
+        } else {
+            mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL)
         }
     }
 

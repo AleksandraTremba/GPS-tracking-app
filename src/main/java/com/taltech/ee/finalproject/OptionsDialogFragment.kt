@@ -3,6 +3,7 @@ package com.taltech.ee.finalproject
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,19 +26,26 @@ class OptionsDialogFragment : DialogFragment() {
         // Find buttons
         val orientationButton = view.findViewById<Button>(R.id.orientation_button)
         val centeredMapButton = view.findViewById<Button>(R.id.centered_map_button)
+        val satelliteViewButton = view.findViewById<Button>(R.id.satellite_view_button)
 
         // Get saved values from preferences and set the initial text
         val isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
         val isCentered = sharedPreferences.getBoolean("isCentered", false)
+        val isSatelliteViewButton = sharedPreferences.getBoolean("isSatelliteView", false)
 
-        orientationButton.text = if (isNorthUp) "North-Up" else "Direction-Up"
+        Log.d("DEBUG", "Loaded preferences: isNorthUp=$isNorthUp, isCentered=$isCentered")
+
+
+
+        orientationButton.text = if (isNorthUp) "Direction-Up" else "North-Up"
         centeredMapButton.text = if (isCentered) "Stop Keeping Map Centered" else "Keep map constantly centered"
+        satelliteViewButton.text = if (isSatelliteViewButton) "Normal view" else "Satellite view"
 
         // Set button click listeners
         orientationButton.setOnClickListener {
             val currentOrientation = sharedPreferences.getBoolean("isNorthUp", true)
             sharedPreferences.edit().putBoolean("isNorthUp", !currentOrientation).apply()
-            orientationButton.text = if (currentOrientation) "Direction-Up" else "North-Up"
+            orientationButton.text = if (currentOrientation) "North-Up" else "Direction-Up"
             // Send a broadcast or callback to MainActivity to update map orientation
             (activity as MainActivity).updateOrientation(!currentOrientation)
         }
@@ -46,9 +54,18 @@ class OptionsDialogFragment : DialogFragment() {
             val currentCentered = sharedPreferences.getBoolean("isCentered", false)
             sharedPreferences.edit().putBoolean("isCentered", !currentCentered).apply()
             centeredMapButton.text = if (currentCentered) "Keep map constantly centered" else "Stop Keeping Map Centered"
-            // Send a broadcast or callback to MainActivity to toggle map centering
             (activity as MainActivity).toggleMapCentering(!currentCentered)
         }
+
+        satelliteViewButton.setOnClickListener {
+            val currentSatelliteView = sharedPreferences.getBoolean("isSatelliteView", true)
+            val newSatelliteView = !currentSatelliteView
+            sharedPreferences.edit().putBoolean("isSatelliteView", newSatelliteView).apply()
+            satelliteViewButton.text = if (newSatelliteView) "Normal view" else "Satellite view"
+
+            (activity as MainActivity).toggleSatelliteView(newSatelliteView)
+        }
+
 
         return view
     }
