@@ -124,7 +124,7 @@
 
             <TextView
                 android:id="@+id/distance_start"
-                android:text="0 km"
+                android:text="0.00 km"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
@@ -138,7 +138,7 @@
 
             <TextView
                 android:id="@+id/pace_start"
-                android:text="0 min/km"
+                android:text="0:00 min/km"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>

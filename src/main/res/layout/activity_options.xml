@@ -4,6 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/black"
+    android:gravity="center"
     android:padding="20dp">
 
     <Button
@@ -23,6 +24,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Sattelite view"/>
+
+    <Button
+        android:id="@+id/saved_sessions_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="Saved Sessions" />
 
 
 </LinearLayout>

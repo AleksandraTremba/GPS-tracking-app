@@ -1,6 +1,7 @@
 package com.taltech.ee.finalproject
 
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
@@ -65,6 +66,13 @@ class OptionsDialogFragment : DialogFragment() {
 
             (activity as MainActivity).toggleSatelliteView(newSatelliteView)
         }
+
+        val savedSessionsButton = view.findViewById<Button>(R.id.saved_sessions_button)
+        savedSessionsButton.setOnClickListener {
+            val intent = Intent(requireContext(), SavedSessionsActivity::class.java)
+            startActivity(intent)
+        }
+
 
 
         return view

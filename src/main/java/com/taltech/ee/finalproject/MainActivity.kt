@@ -9,13 +9,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.View
 import android.widget.Button
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -23,7 +20,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -73,6 +69,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         addAction(C.LOCATION_UPDATE_ACTION)
     }
     private var locationServiceActive = false
+
+    private var totalDistance: Float = 0f
+    private var lastUpdateTime: Long = 0
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -264,7 +263,32 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun simulateMovement() {
+        val startLocation = previousLocation ?: Location("").apply {
+            latitude = 59.39487859716227
+            longitude = 24.67152136890696
+        }
+
+        val newLocation = Location("").apply {
+            val randomDirection = Math.random() * 2 * Math.PI // Random direction in radians
+            val distance = 100.0 / 6371000.0 // 100 meters in radians (Earth radius = 6371 km)
+
+            latitude = startLocation.latitude + Math.toDegrees(distance * Math.cos(randomDirection))
+            longitude = startLocation.longitude + Math.toDegrees(distance * Math.sin(randomDirection) / Math.cos(Math.toRadians(startLocation.latitude)))
+        }
+
+        // Pass this new location to your `onNewLocation` function
+        onNewLocation(newLocation)
+
+        // Schedule the next update in 2 seconds
+        elapsedTimeHandler.postDelayed({ simulateMovement() }, 2000)
+    }
+
+
     private fun onNewLocation(location: Location) {
+        if (!isTracking) {
+            return
+        }
         // Convert the location to LatLng
         val latLng = LatLng(location.latitude, location.longitude)
 
@@ -276,14 +300,44 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
         }
 
-        // Update the previous location to the current one for the next update
+        val currentTime = System.currentTimeMillis()
+
+        // Calculate distance if there is a previous location
+        previousLocation?.let {
+            val distance = it.distanceTo(location) // Distance in meters
+            totalDistance += distance // Add to total distance
+
+            // Calculate elapsed time since last update
+            val elapsedTime = (currentTime - lastUpdateTime) / 1000f // in seconds
+
+            // Calculate pace (time per kilometer)
+            if (totalDistance > 0) {
+                val pace = if (elapsedTime > 0) (elapsedTime / (distance / 1000)) else 0f // seconds/km
+                updatePaceTextView(pace)
+            }
+        }
+
+        lastUpdateTime = currentTime
         previousLocation = location
 
-        // Move camera to the new location
+        updateDistanceTextView()
+
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
     }
 
+    private fun updateDistanceTextView() {
+        val distanceTextView = findViewById<TextView>(R.id.distance_start)
+        val distanceInKm = totalDistance / 1000
+        distanceTextView.text = String.format("%.2f km", distanceInKm)
+    }
 
+    private fun updatePaceTextView(pace: Float) {
+        val paceTextView = findViewById<TextView>(R.id.pace_start)
+        val paceInMinutes = pace / 60
+        val minutes = paceInMinutes.toInt()
+        val seconds = ((paceInMinutes - minutes) * 60).toInt()
+        paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+    }
 
     private fun startTracking() {
         isTracking = true
@@ -291,6 +345,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         startTime = System.currentTimeMillis()
         elapsedTimeHandler.postDelayed(updateElapsedTimeRunnable, 1000)
         startLocationUpdates()
+
+//        simulateMovement()
     }
 
 
@@ -298,8 +354,46 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         isTracking = false
         startStopButton.text = "Start"
         elapsedTimeHandler.removeCallbacks(updateElapsedTimeRunnable)
-        mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // This stops the location updates
+        mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // Stop location updates
+
+        // Clear polyline
+        mPolyline?.remove()
+
+        // Save session data
+        saveSessionData()
+
+        // Reset the tracking data
+        totalDistance = 0f
+        lastUpdateTime = 0
+        previousLocation = null
+        mPolyline = null
     }
+
+
+    private fun saveSessionData() {
+        val track = mPolyline?.points?.joinToString(",") { "${it.latitude},${it.longitude}" } ?: ""
+        val distanceInKm = totalDistance / 1000  // Convert to kilometers
+        val elapsedTime = System.currentTimeMillis() - startTime  // Time in milliseconds
+
+        val pace = if (totalDistance > 0) {
+            val time = elapsedTime / 1000f
+            val pace = if (time > 0) (time / (totalDistance / 1000)) else 0f
+            val paceInMinutes = pace / 60
+            val minutes = paceInMinutes.toInt()
+            val seconds = ((paceInMinutes - minutes) * 60).toInt()
+
+            String.format("%d:%02d min/km", minutes, seconds)
+        } else {
+            "N/A"
+        }
+
+        // Insert session into the database
+        val dbHelper = SessionsDatabaseHelper(this)
+        dbHelper.insertSession(track, distanceInKm.toFloat(), elapsedTime, pace)
+    }
+
+
+
 
 
     private val updateElapsedTimeRunnable = object : Runnable {
