@@ -1,5 +1,6 @@
 package com.taltech.ee.finalproject
 
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -7,8 +8,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
-
-
     companion object {
         private const val DATABASE_NAME = "sessions.db"
         private const val DATABASE_VERSION = 1
@@ -55,5 +54,35 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
     fun getAllSessions(): Cursor {
         val db = readableDatabase
         return db.query(TABLE_NAME, null, null, null, null, null, "$COLUMN_ID DESC")
+    }
+
+    @SuppressLint("Range")
+    fun getSessionById(sessionId: Long): Session? {
+        val db = this.readableDatabase
+
+        val query = "SELECT * FROM $TABLE_NAME WHERE $COLUMN_ID = ?"
+        val cursor: Cursor = db.rawQuery(query, arrayOf(sessionId.toString()))
+
+        var session: Session? = null
+
+        if (cursor.moveToFirst()) {
+            val id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID))
+            val track = cursor.getString(cursor.getColumnIndex(COLUMN_TRACK))
+            val distance = cursor.getFloat(cursor.getColumnIndex(COLUMN_DISTANCE))
+            val time = cursor.getInt(cursor.getColumnIndex(COLUMN_TIME))
+            val pace = cursor.getFloat(cursor.getColumnIndex(COLUMN_PACE))
+
+            session = Session(id, track, distance, time, pace)
+        }
+
+        cursor.close()
+        db.close()
+
+        return session
+    }
+
+    fun deleteAllSessions() {
+        val db = writableDatabase
+        db.delete(TABLE_NAME, null, null)
     }
 }

@@ -32,6 +32,8 @@
         </activity>
         <activity android:name=".SavedSessionsActivity">
         </activity>
+        <activity android:name=".SessionMapActivity">
+        </activity>
     </application>
 
 </manifest>

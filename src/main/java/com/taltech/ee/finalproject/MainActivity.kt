@@ -50,6 +50,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isNorthUp: Boolean = true // Default to North-Up
     private var isSatelliteView: Boolean = false
 
+    private var track: MutableList<String> = mutableListOf()
+
     private lateinit var optionsButton: Button
     private lateinit var orientationTextView: TextView
 
@@ -298,6 +300,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             // Create a polyline from previous location to the new one
             mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
+            track.add("${location.latitude},${location.longitude},${it.latitude},${it.longitude}")
         }
 
         val currentTime = System.currentTimeMillis()
@@ -371,7 +374,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
     private fun saveSessionData() {
-        val track = mPolyline?.points?.joinToString(",") { "${it.latitude},${it.longitude}" } ?: ""
+        val savedTrack = track.joinToString(";")
+
         val distanceInKm = totalDistance / 1000  // Convert to kilometers
         val elapsedTime = System.currentTimeMillis() - startTime  // Time in milliseconds
 
@@ -389,7 +393,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Insert session into the database
         val dbHelper = SessionsDatabaseHelper(this)
-        dbHelper.insertSession(track, distanceInKm.toFloat(), elapsedTime, pace)
+        dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace)
+        Toast.makeText(this, "Session saved.", Toast.LENGTH_SHORT).show()
     }
 
 
