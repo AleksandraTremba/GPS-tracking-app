@@ -33,7 +33,6 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
-import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -46,6 +45,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mFusedLocationClient: FusedLocationProviderClient
     private var mLocationCallback: LocationCallback? = null
     private var mPolyline: Polyline? = null
+    private val polylines = mutableListOf<Polyline>()
     private var isTracking = false
     private var startLocation: Location? = null
 
@@ -64,6 +64,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var startStopButton: Button
     private lateinit var timeElapsedTextView: TextView
 
+    private lateinit var timeElapsedCheckpoint: TextView
+    private lateinit var timeElapsedWaypoint: TextView
+
+
     // Time tracking
     private var startTime: Long = 0
     private lateinit var elapsedTimeHandler: android.os.Handler
@@ -78,9 +82,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var totalDistance: Float = 0f
     private var lastUpdateTime: Long = 0
 
-    private val checkpointMarkers: MutableList<MarkerOptions> = mutableListOf()
-    private var currentWaypointMarker: Marker? = null
+    private val checkpointMarkers: MutableList<Marker> = mutableListOf()
+    private var lastCheckpoint: MarkerOptions? = null
+    private var lastCheckpointTime: Long = 0
 
+    private var currentWaypointMarker: Marker? = null
+    private var lastWaypointTime: Long = 0
+
+    private var checkpointDistance: Float = 0f
+
+    private var waypointDistance: Float = 0f
 
 
 
@@ -106,6 +117,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         startStopButton = findViewById(R.id.start_stop_button)
         timeElapsedTextView = findViewById(R.id.time_elapsed_start)
+        timeElapsedCheckpoint = findViewById(R.id.time_elapsed_checkpoint)
+        timeElapsedWaypoint = findViewById(R.id.time_elapsed_waypoint)
 
         startStopButton.setOnClickListener {
             if (startStopButton.text == "Stop") {
@@ -188,24 +201,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun enableCheckpointMode() {
+
         Toast.makeText(this, "Tap on the map to add a checkpoint.", Toast.LENGTH_SHORT).show()
 
-        // Set a map click listener to add a checkpoint
-        mMap.setOnMapClickListener { latLng ->
-            // Add a marker at the clicked location
-            val checkpointMarker = MarkerOptions()
-                .position(latLng)
-                .title("Checkpoint")
-                .snippet("Lat: ${latLng.latitude}, Lng: ${latLng.longitude}")
-            mMap.addMarker(checkpointMarker)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions()
+            return
+        }
 
-            // Save the checkpoint to the list
-            checkpointMarkers.add(checkpointMarker)
+        mFusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            if (location != null) {
+                val latLng = LatLng(location.latitude, location.longitude)
 
-            // Remove map click listener after adding a checkpoint
-            mMap.setOnMapClickListener(null)
+                val checkpointMarkerOptions = MarkerOptions()
+                    .position(latLng)
+                    .title("Checkpoint")
+                    .snippet("Lat: ${latLng.latitude}, Lng: ${latLng.longitude}")
+                var checkpointMarker = mMap.addMarker(checkpointMarkerOptions)
 
-            Toast.makeText(this, "Checkpoint added.", Toast.LENGTH_SHORT).show()
+                checkpointMarker?.let { checkpointMarkers.add(it) }
+                lastCheckpoint = checkpointMarkerOptions
+                val currentTime = System.currentTimeMillis()
+                lastCheckpointTime = currentTime
+
+                Toast.makeText(this, "Checkpoint added.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Unable to fetch current location.", Toast.LENGTH_SHORT).show()
+            }
+        }.addOnFailureListener {
+            Toast.makeText(this, "Failed to get location: ${it.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -227,6 +251,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         .title("Waypoint")
                         .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
                 )
+
+                val currentTime = System.currentTimeMillis()
+                lastWaypointTime = currentTime
 
                 Toast.makeText(this, "Waypoint added at your current location.", Toast.LENGTH_SHORT).show()
             } else {
@@ -361,8 +388,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun onNewLocation(location: Location) {
         if (!isTracking) {
-            return
+            return // Don't calculate distance or update data if tracking is not active
         }
+
         // Convert the location to LatLng
         val latLng = LatLng(location.latitude, location.longitude)
 
@@ -371,7 +399,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val previousLatLng = LatLng(it.latitude, it.longitude)
 
             // Create a polyline from previous location to the new one
-            mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
+            val polyline = mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
+            polylines.add(polyline)
             track.add("${location.latitude},${location.longitude},${it.latitude},${it.longitude}")
         }
 
@@ -390,15 +419,62 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val pace = if (elapsedTime > 0) (elapsedTime / (distance / 1000)) else 0f // seconds/km
                 updatePaceTextView(pace)
             }
+
+            // Calculate distances for Checkpoint and Waypoint only if they exist
+
+            // Checkpoint
+            var positionToCheckpoint = lastCheckpoint?.position
+            val locationToCheckpoint = positionToCheckpoint?.let {
+                Location("").apply {
+                    latitude = it.latitude
+                    longitude = it.longitude
+                }
+            }
+
+            var distanceToCheckpoint = locationToCheckpoint?.let { it1 -> it.distanceTo(it1) }
+            if (distanceToCheckpoint != null) {
+                checkpointDistance = distanceToCheckpoint
+            }
+
+            val elapsedTimeCheckpoint = (currentTime - lastCheckpointTime) / 1000f // in seconds
+
+            if (distanceToCheckpoint != null && distanceToCheckpoint > 0) {
+                val pace = if (elapsedTimeCheckpoint > 0) (elapsedTimeCheckpoint / (distanceToCheckpoint / 1000)) else 0f // seconds/km
+                updateCheckpointPaceTextView(pace)
+            }
+
+            // Waypoint
+            var positionToWaypoint = currentWaypointMarker?.position
+            val locationToWaypoint = positionToWaypoint?.let {
+                Location("").apply {
+                    latitude = it.latitude
+                    longitude = it.longitude
+                }
+            }
+
+            var distanceToWaypoint = locationToWaypoint?.let { it1 -> it.distanceTo(it1) }
+            if (distanceToWaypoint != null) {
+                waypointDistance += distanceToWaypoint
+            }
+            val elapsedTimeWaypoint = (currentTime - lastWaypointTime) / 1000f // in seconds
+
+            if (distanceToWaypoint != null && distanceToWaypoint > 0) {
+                val pace = if (elapsedTimeWaypoint > 0) (elapsedTimeWaypoint / (distanceToWaypoint / 1000)) else 0f // seconds/km
+                updateWaypointPaceTextView(pace)
+            }
+
         }
 
         lastUpdateTime = currentTime
         previousLocation = location
 
         updateDistanceTextView()
+        updateCheckpointDistanceTextView()
+        updateWaypointDistanceTextView()
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
     }
+
 
     private fun updateDistanceTextView() {
         val distanceTextView = findViewById<TextView>(R.id.distance_start)
@@ -413,6 +489,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val seconds = ((paceInMinutes - minutes) * 60).toInt()
         paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
     }
+
+    private fun updateCheckpointDistanceTextView() {
+        val distanceTextView = findViewById<TextView>(R.id.distance_checkpoint)
+        val distanceInKm = checkpointDistance / 1000
+        distanceTextView.text = String.format("%.2f km", distanceInKm)
+    }
+
+    private fun updateCheckpointPaceTextView(pace: Float) {
+        val paceTextView = findViewById<TextView>(R.id.pace_checkpoint)
+        val paceInMinutes = pace / 60
+        val minutes = paceInMinutes.toInt()
+        val seconds = ((paceInMinutes - minutes) * 60).toInt()
+        paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+    }
+
+    private fun updateWaypointDistanceTextView() {
+        val distanceTextView = findViewById<TextView>(R.id.distance_waypoint)
+        val distanceInKm = waypointDistance / 1000
+        distanceTextView.text = String.format("%.2f km", distanceInKm)
+    }
+
+    private fun updateWaypointPaceTextView(pace: Float) {
+        val paceTextView = findViewById<TextView>(R.id.pace_waypoint)
+        val paceInMinutes = pace / 60
+        val minutes = paceInMinutes.toInt()
+        val seconds = ((paceInMinutes - minutes) * 60).toInt()
+        paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+    }
+
+
 
     private fun startTracking() {
         isTracking = true
@@ -431,8 +537,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         elapsedTimeHandler.removeCallbacks(updateElapsedTimeRunnable)
         mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // Stop location updates
 
-        // Clear polyline
+        polylines.forEach { polyline ->
+            polyline.remove()  // Remove each polyline from the map
+        }
+        polylines.clear()
         mPolyline?.remove()
+
+
+        checkpointMarkers.forEach { marker ->
+            marker.remove()
+        }
+        checkpointMarkers.clear()  // Clear the list of checkpoint markers
+
+        // Remove current waypoint marker (if needed)
+        currentWaypointMarker?.remove()
 
         // Save session data
         saveSessionData()
@@ -442,7 +560,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lastUpdateTime = 0
         previousLocation = null
         mPolyline = null
+        lastCheckpoint = null
+        lastCheckpointTime = 0L
+        currentWaypointMarker = null
     }
+
 
 
     private fun saveSessionData() {
@@ -470,9 +592,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
-
-
-
     private val updateElapsedTimeRunnable = object : Runnable {
         override fun run() {
             if (isTracking) {
@@ -481,6 +600,32 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val minutes = (elapsedMillis / (1000 * 60)) % 60
                 val seconds = (elapsedMillis / 1000) % 60
                 timeElapsedTextView.text = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+                if (lastCheckpointTime != 0L) {
+                    val elapsedMillisCheckpoint = System.currentTimeMillis() - lastCheckpointTime
+                    val hoursCheckpoint = (elapsedMillisCheckpoint / (1000 * 60 * 60)) % 24
+                    val minutesCheckpoint = (elapsedMillisCheckpoint / (1000 * 60)) % 60
+                    val secondsCheckpoint = (elapsedMillisCheckpoint / 1000) % 60
+                    timeElapsedCheckpoint.text = String.format(
+                        "%02d:%02d:%02d",
+                        hoursCheckpoint,
+                        minutesCheckpoint,
+                        secondsCheckpoint
+                    )
+                }
+
+                if (lastWaypointTime != 0L) {
+                    val elapsedMillisWaypoint = System.currentTimeMillis() - lastWaypointTime
+                    val hoursWaypoint = (elapsedMillisWaypoint / (1000 * 60 * 60)) % 24
+                    val minutesWaypoint = (elapsedMillisWaypoint / (1000 * 60)) % 60
+                    val secondsWaypoint = (elapsedMillisWaypoint / 1000) % 60
+                    timeElapsedWaypoint.text = String.format(
+                        "%02d:%02d:%02d",
+                        hoursWaypoint,
+                        minutesWaypoint,
+                        secondsWaypoint
+                    )
+                }
                 elapsedTimeHandler.postDelayed(this, 1000)
             }
         }

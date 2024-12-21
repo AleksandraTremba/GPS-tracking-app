@@ -163,21 +163,21 @@
 
             <TextView
                 android:id="@+id/distance_checkpoint"
-                android:text="1500"
+                android:text="0.00 km"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
             <TextView
                 android:id="@+id/time_elapsed_checkpoint"
-                android:text="8:45"
+                android:text="00:00:00"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
             <TextView
                 android:id="@+id/pace_checkpoint"
-                android:text="6:37"
+                android:text="0:00 min/km"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
@@ -201,21 +201,21 @@
 
             <TextView
                 android:id="@+id/distance_waypoint"
-                android:text="783"
+                android:text="0.00 km"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
             <TextView
                 android:id="@+id/time_elapsed_waypoint"
-                android:text="7:35"
+                android:text="00:00:00"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
             <TextView
                 android:id="@+id/pace_waypoint"
-                android:text="7:35"
+                android:text="0:00 min/km"
                 android:textSize="12sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
