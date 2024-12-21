@@ -14,6 +14,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.widget.Button
+import android.widget.ImageButton
 import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
@@ -25,8 +26,10 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
@@ -75,6 +78,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var totalDistance: Float = 0f
     private var lastUpdateTime: Long = 0
 
+    private val checkpointMarkers: MutableList<MarkerOptions> = mutableListOf()
+    private var currentWaypointMarker: Marker? = null
+
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,6 +112,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 showPopupWindow()
             } else {
                 startTracking()
+            }
+        }
+
+        val checkpointButton = findViewById<ImageButton>(R.id.checkpoint_icon)
+        checkpointButton.setOnClickListener {
+            if (isTracking) {
+                enableCheckpointMode()
+            }
+        }
+        val waypointButton = findViewById<ImageButton>(R.id.waypoint_icon)
+        waypointButton.setOnClickListener {
+            if (isTracking) {
+                addWaypoint()
             }
         }
 
@@ -165,6 +186,57 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             0, 0  // offset position (0, 0 means centered)
         )
     }
+
+    private fun enableCheckpointMode() {
+        Toast.makeText(this, "Tap on the map to add a checkpoint.", Toast.LENGTH_SHORT).show()
+
+        // Set a map click listener to add a checkpoint
+        mMap.setOnMapClickListener { latLng ->
+            // Add a marker at the clicked location
+            val checkpointMarker = MarkerOptions()
+                .position(latLng)
+                .title("Checkpoint")
+                .snippet("Lat: ${latLng.latitude}, Lng: ${latLng.longitude}")
+            mMap.addMarker(checkpointMarker)
+
+            // Save the checkpoint to the list
+            checkpointMarkers.add(checkpointMarker)
+
+            // Remove map click listener after adding a checkpoint
+            mMap.setOnMapClickListener(null)
+
+            Toast.makeText(this, "Checkpoint added.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun addWaypoint() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions()
+            return
+        }
+
+        mFusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            if (location != null) {
+                val latLng = LatLng(location.latitude, location.longitude)
+                currentWaypointMarker?.remove()
+
+                // Add a new waypoint marker at the current location
+                currentWaypointMarker = mMap.addMarker(
+                    MarkerOptions()
+                        .position(latLng)
+                        .title("Waypoint")
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+                )
+
+                Toast.makeText(this, "Waypoint added at your current location.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "Unable to fetch current location.", Toast.LENGTH_SHORT).show()
+            }
+        }.addOnFailureListener {
+            Toast.makeText(this, "Failed to get location: ${it.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
 
     override fun onMapReady(googleMap: GoogleMap) {

@@ -152,12 +152,14 @@
             android:layout_weight="1"
             android:gravity="center">
 
-            <ImageView
+            <ImageButton
                 android:id="@+id/checkpoint_icon"
                 android:src="@drawable/ic_checkpoint"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:scaleType="centerInside"
                 app:tint="@color/white" />
+
 
             <TextView
                 android:id="@+id/distance_checkpoint"
@@ -189,11 +191,12 @@
             android:layout_weight="1"
             android:gravity="center">
 
-            <ImageView
+            <ImageButton
                 android:id="@+id/waypoint_icon"
                 android:src="@drawable/ic_waypoint"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:scaleType="centerInside"
                 app:tint="@color/white" />
 
             <TextView
