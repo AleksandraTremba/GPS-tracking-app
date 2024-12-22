@@ -3,18 +3,13 @@ package com.taltech.ee.finalproject
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GooglePlayServicesUtil
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 
 class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -27,6 +22,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_session_map)
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.saved_session_map) as SupportMapFragment
+        Log.d("SessionMapActivity", "getMapAsync called")
         mapFragment.getMapAsync(this)
 
         val sessionId = intent.getLongExtra("SESSION_ID", -1)
@@ -45,9 +41,13 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (session != null) {
             val track = session.track // Assume track is a String with coordinates
+            val distance = session.distance
+            val time = session.time
+            val pace = session.pace
 
             // Parse the track string into a list of LatLng coordinates
             coordinates = parseTrack(track)
+            updateSessionText(distance, time, pace)
         }
     }
 
@@ -90,11 +90,18 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun updateSessionText(distance: Float, time: Int, pace: String) {
+        val hours = (time / (1000 * 60 * 60)) % 24
+        val minutes = (time / (1000 * 60)) % 60
+        val seconds = (time / 1000) % 60
+
+        var savedSessionText = findViewById<TextView>(R.id.saved_sessions_text)
+        savedSessionText.text = "Distance: ${"%.2f".format(distance)} km | Time: " +
+                "${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace"
+    }
+
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
-        val location = LatLng(59.39487859716227, 24.67152136890696)
-        googleMap!!.addMarker(MarkerOptions().position(location).title("Marker in TalTech"))
-        googleMap!!.moveCamera(CameraUpdateFactory.newLatLng(location))
 
         if (coordinates?.isNotEmpty() == true) {
             Log.d("SessionMapActivity", "Coordinates were not empty: $coordinates")

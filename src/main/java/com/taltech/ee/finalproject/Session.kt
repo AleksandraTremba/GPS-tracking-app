@@ -5,5 +5,5 @@ data class Session(
     val track: String,
     val distance: Float,
     val time: Int,
-    val pace: Float
+    val pace: String
 )

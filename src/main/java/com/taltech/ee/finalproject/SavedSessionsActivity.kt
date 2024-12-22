@@ -40,7 +40,7 @@ class SavedSessionsActivity : AppCompatActivity() {
             val minutes = (time / (1000 * 60)) % 60
             val seconds = (time / 1000) % 60
 
-            sessionList.add("Track: $track | Distance: ${"%.2f".format(distance)} km | Time: ${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace")
+            sessionList.add("Session $sessionId \n\nDistance: ${"%.2f".format(distance)} km | Time: ${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace")
             sessionIdList.add(sessionId)
         }
 

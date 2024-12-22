@@ -70,7 +70,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             val track = cursor.getString(cursor.getColumnIndex(COLUMN_TRACK))
             val distance = cursor.getFloat(cursor.getColumnIndex(COLUMN_DISTANCE))
             val time = cursor.getInt(cursor.getColumnIndex(COLUMN_TIME))
-            val pace = cursor.getFloat(cursor.getColumnIndex(COLUMN_PACE))
+            val pace = cursor.getString(cursor.getColumnIndex(COLUMN_PACE))
 
             session = Session(id, track, distance, time, pace)
         }
