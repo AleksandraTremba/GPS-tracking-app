@@ -3,7 +3,11 @@ package com.taltech.ee.finalproject
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -17,6 +21,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     private var googleMap: GoogleMap? = null
     private var coordinates: List<LatLng>? = null
     private var checkpointCoordinates: List<LatLng>? = null
+    private var sessionId: Long = -1
 
 
     @SuppressLint("WrongViewCast", "SetTextI18n")
@@ -25,40 +30,50 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_session_map)
 
         val mapFragment = supportFragmentManager.findFragmentById(R.id.saved_session_map) as SupportMapFragment
-        Log.d("SessionMapActivity", "getMapAsync called")
         mapFragment.getMapAsync(this)
 
-        val sessionId = intent.getLongExtra("SESSION_ID", -1)
+        sessionId = intent.getLongExtra("SESSION_ID", -1)  // Store the sessionId passed from the previous activity
         if (sessionId != -1L) {
             loadSessionData(sessionId)
         }
 
-        val sessionText = findViewById<TextView>(R.id.session_id)
-        sessionText.text = "Session $sessionId"
+        findViewById<Button>(R.id.rename_button).setOnClickListener {
+            showRenameDialog()
+        }
 
+        findViewById<Button>(R.id.delete_button).setOnClickListener {
+            showDeleteConfirmationDialog()
+        }
     }
+
 
     private fun loadSessionData(sessionId: Long) {
         val dbHelper = SessionsDatabaseHelper(this)
         val session = dbHelper.getSessionById(sessionId)
 
         if (session != null) {
-            val track = session.track // Assume track is a String with coordinates
+            val track = session.track
             val distance = session.distance
             val time = session.time
             val pace = session.pace
 
-            // Parse the track string into a list of LatLng coordinates
             coordinates = parseTrack(track)
 
             val checkpoints = dbHelper.getCheckpointsForSession(sessionId)
             checkpointCoordinates = checkpoints.map { LatLng(it.latitude, it.longitude) }
             Log.d("DB", "checkpoint coordinates: $checkpointCoordinates")
 
+            val sessionText = findViewById<TextView>(R.id.session_id)
+            if (session.name != "Session") {
+                sessionText.text = "${session.name}"
+            } else {
+                sessionText.text = "Session $sessionId"
+            }
 
             updateSessionText(distance, time, pace)
         }
     }
+
 
     private fun parseTrack(track: String): List<LatLng> {
         val coordinates = mutableListOf<LatLng>()
@@ -113,6 +128,54 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         var savedSessionText = findViewById<TextView>(R.id.saved_sessions_text)
         savedSessionText.text = "Distance: ${"%.2f".format(distance)} km | Time: " +
                 "${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace"
+    }
+
+    private fun showRenameDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Rename Session")
+
+        val input = EditText(this)
+        input.setHint("Enter new session name")
+        builder.setView(input)
+
+        builder.setPositiveButton("Rename") { _, _ ->
+            val newSessionName = input.text.toString()
+            if (newSessionName.isNotEmpty()) {
+                renameSession(newSessionName)
+            }
+        }
+        builder.setNegativeButton("Cancel", null)
+
+        builder.show()
+    }
+
+    private fun renameSession(newSessionName: String) {
+        val dbHelper = SessionsDatabaseHelper(this)
+        dbHelper.updateSessionName(sessionId, newSessionName)
+        Toast.makeText(this, "Session renamed to: $newSessionName", Toast.LENGTH_SHORT).show()
+
+        loadSessionData(sessionId)
+    }
+
+
+    private fun showDeleteConfirmationDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Delete Session")
+        builder.setMessage("Are you sure you want to delete this session?")
+
+        builder.setPositiveButton("Delete") { _, _ ->
+            deleteSession()
+        }
+        builder.setNegativeButton("Cancel", null)
+
+        builder.show()
+    }
+
+    private fun deleteSession() {
+        val dbHelper = SessionsDatabaseHelper(this)
+        dbHelper.deleteSession(sessionId)
+        Toast.makeText(this, "Session deleted", Toast.LENGTH_SHORT).show()
+        finish() // Close activity after deletion
     }
 
     override fun onMapReady(map: GoogleMap) {

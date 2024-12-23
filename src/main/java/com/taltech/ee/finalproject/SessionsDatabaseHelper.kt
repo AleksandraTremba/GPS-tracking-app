@@ -10,11 +10,12 @@ import android.database.sqlite.SQLiteOpenHelper
 class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
         private const val DATABASE_NAME = "sessions.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         // Table name and column names
         const val TABLE_NAME = "sessions"
         const val COLUMN_ID = "id"
+        const val COLUMN_NAME = "name"
         const val COLUMN_TRACK = "track"
         const val COLUMN_DISTANCE = "distance"
         const val COLUMN_TIME = "time"
@@ -33,6 +34,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         val createTableQuery = """
             CREATE TABLE $TABLE_NAME (
                 $COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_NAME TEXT,
                 $COLUMN_TRACK TEXT,
                 $COLUMN_DISTANCE REAL,
                 $COLUMN_TIME INTEGER,
@@ -62,6 +64,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
     fun insertSession(track: String, distance: Float, time: Long, pace: String): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
+            put(COLUMN_NAME, "Session")
             put(COLUMN_TRACK, track)
             put(COLUMN_DISTANCE, distance)
             put(COLUMN_TIME, time)
@@ -116,26 +119,31 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
     fun getSessionById(sessionId: Long): Session? {
         val db = this.readableDatabase
 
+        // Prepare query
         val query = "SELECT * FROM $TABLE_NAME WHERE $COLUMN_ID = ?"
         val cursor: Cursor = db.rawQuery(query, arrayOf(sessionId.toString()))
 
         var session: Session? = null
 
+        // Check if the cursor contains any results
         if (cursor.moveToFirst()) {
-            val id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID))
-            val track = cursor.getString(cursor.getColumnIndex(COLUMN_TRACK))
-            val distance = cursor.getFloat(cursor.getColumnIndex(COLUMN_DISTANCE))
-            val time = cursor.getInt(cursor.getColumnIndex(COLUMN_TIME))
-            val pace = cursor.getString(cursor.getColumnIndex(COLUMN_PACE))
+            // Access the columns with proper indices
+            val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID)) // Use getColumnIndexOrThrow for safety
+            val track = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_TRACK))
+            val name = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_NAME))
+            val distance = cursor.getFloat(cursor.getColumnIndexOrThrow(COLUMN_DISTANCE))
+            val time = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_TIME))
+            val pace = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PACE))
 
-            session = Session(id, track, distance, time, pace)
+            session = Session(id, track, name, distance, time, pace)
         }
 
-        cursor.close()
-        db.close()
+        cursor.close() // Always close the cursor to avoid memory leaks
+        db.close() // Close the database
 
         return session
     }
+
 
     fun clearDatabase() {
         val db = writableDatabase
@@ -149,4 +157,21 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         val db = writableDatabase
         db.delete(TABLE_NAME, null, null)
     }
+
+    fun updateSessionName(sessionId: Long, newSessionName: String) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_NAME, newSessionName)  // Correct column used
+        }
+        db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(sessionId.toString())) // Ensure sessionId is passed
+        db.close()
+    }
+
+
+    // Delete session from the database
+    fun deleteSession(sessionId: Long) {
+        val db = writableDatabase
+        db.delete("sessions", "id = ?", arrayOf(sessionId.toString()))
+    }
+
 }

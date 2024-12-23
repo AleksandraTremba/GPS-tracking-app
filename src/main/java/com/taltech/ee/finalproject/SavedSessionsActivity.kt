@@ -26,6 +26,7 @@ class SavedSessionsActivity : AppCompatActivity() {
         val sessionList = mutableListOf<String>()
         while (cursor.moveToNext()) {
             val sessionId = cursor.getLong(cursor.getColumnIndex(SessionsDatabaseHelper.COLUMN_ID))
+            val name = cursor.getString(cursor.getColumnIndex(SessionsDatabaseHelper.COLUMN_NAME)) // Get session name
             val track = cursor.getString(cursor.getColumnIndex(SessionsDatabaseHelper.COLUMN_TRACK))
             val distance = cursor.getFloat(cursor.getColumnIndex(SessionsDatabaseHelper.COLUMN_DISTANCE))
             val time = cursor.getLong(cursor.getColumnIndex(SessionsDatabaseHelper.COLUMN_TIME))
@@ -35,7 +36,9 @@ class SavedSessionsActivity : AppCompatActivity() {
             val minutes = (time / (1000 * 60)) % 60
             val seconds = (time / 1000) % 60
 
-            sessionList.add("Session $sessionId \n\nDistance: ${"%.2f".format(distance)} km | Time: ${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace")
+            val displayName = if (name != "Session") name else "Session $sessionId"
+
+            sessionList.add("$displayName \n\nDistance: ${"%.2f".format(distance)} km | Time: ${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace")
             sessionIdList.add(sessionId)
         }
 

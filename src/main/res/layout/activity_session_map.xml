@@ -29,4 +29,17 @@
         android:textSize="20sp"
         android:textColor="@color/white" />
 
+    <Button
+        android:id="@+id/rename_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Rename Session" />
+
+    <Button
+        android:id="@+id/delete_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Delete Session"
+        android:layout_marginTop="16dp" />
+
 </LinearLayout>

@@ -168,7 +168,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Set initial text based on preferences
         orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
-        createNotificationChannel()
+        startLocationService()
     }
 
     private fun showPopupWindow() {
@@ -637,6 +637,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun startLocationService() {
+        createNotificationChannel()
+
+        val serviceIntent = Intent(this, LocationService::class.java)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Log.d("MainActivity", "Starting LocationService with startForegroundService")
+            startForegroundService(serviceIntent)
+        } else {
+            Log.d("MainActivity", "Starting LocationService with startService")
+            startService(serviceIntent)
+        }
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -645,10 +659,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 NotificationManager.IMPORTANCE_LOW
             )
             channel.description = "Displays location updates in the background"
+
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager?.createNotificationChannel(channel)
         }
     }
+
 
     private fun checkPermissions(): Boolean {
         return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
