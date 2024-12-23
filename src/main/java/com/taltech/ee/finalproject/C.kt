@@ -2,18 +2,13 @@ package com.taltech.ee.finalproject
 
 class C {
     companion object {
-        val NOTIFICATION_CHANNEL = "default_channel"
-        val NOTIFICATION_ACTION_WP = "ee.itcollege.akaver.wp"
-        val NOTIFICATION_ACTION_CP = "ee.itcollege.akaver.cp"
+        const val NOTIFICATION_CHANNEL = "location_updates_channel"
+        const val LOCATION_UPDATE_ACTION = "com.taltech.ee.finalproject.location_update"
 
-        val LOCATION_UPDATE_ACTION = "ee.itcollege.akaver.location_update"
+        const val LOCATION_UPDATE_ACTION_LATITUDE = "com.taltech.ee.finalproject.location_update.latitude"
+        const val LOCATION_UPDATE_ACTION_LONGITUDE = "com.taltech.ee.finalproject.location_update.longitude"
 
-        val LOCATION_UPDATE_ACTION_LATITUDE = "ee.itcollege.akaver.location_update.latitude"
-        val LOCATION_UPDATE_ACTION_LONGITUDE = "ee.itcollege.akaver.location_update.longitude"
-
-        val NOTIFICATION_ID = 4321
-        val REQUEST_PERMISSIONS_REQUEST_CODE = 34;
-
-
+        const val NOTIFICATION_ID = 4321
+        const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
     }
 }

@@ -168,6 +168,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Set initial text based on preferences
         orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
+        createNotificationChannel()
     }
 
     private fun showPopupWindow() {
@@ -201,9 +202,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun enableCheckpointMode() {
-
-        Toast.makeText(this, "Tap on the map to add a checkpoint.", Toast.LENGTH_SHORT).show()
-
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions()
             return
@@ -220,6 +218,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 var checkpointMarker = mMap.addMarker(checkpointMarkerOptions)
 
                 checkpointMarker?.let { checkpointMarkers.add(it) }
+                Log.d("DB", "checkpoint markers: $checkpointMarkers")
+
                 lastCheckpoint = checkpointMarkerOptions
                 val currentTime = System.currentTimeMillis()
                 lastCheckpointTime = currentTime
@@ -537,6 +537,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         elapsedTimeHandler.removeCallbacks(updateElapsedTimeRunnable)
         mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // Stop location updates
 
+        saveSessionData()
+
         polylines.forEach { polyline ->
             polyline.remove()  // Remove each polyline from the map
         }
@@ -552,9 +554,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Remove current waypoint marker (if needed)
         currentWaypointMarker?.remove()
 
-        // Save session data
-        saveSessionData()
-
         // Reset the tracking data
         totalDistance = 0f
         lastUpdateTime = 0
@@ -564,8 +563,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lastCheckpointTime = 0L
         currentWaypointMarker = null
     }
-
-
 
     private fun saveSessionData() {
         val savedTrack = track.joinToString(";")
@@ -587,9 +584,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Insert session into the database
         val dbHelper = SessionsDatabaseHelper(this)
-        dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace)
-        Toast.makeText(this, "Session saved.", Toast.LENGTH_SHORT).show()
+        val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace)
+
+        // Save all checkpoints for the session
+        for (marker in checkpointMarkers) {
+            val latitude = marker.position.latitude
+            val longitude = marker.position.longitude
+            dbHelper.insertCheckpoint(sessionId, latitude, longitude)
+        }
+
+        Toast.makeText(this, "Session and checkpoints saved.", Toast.LENGTH_SHORT).show()
     }
+
 
 
     private val updateElapsedTimeRunnable = object : Runnable {
@@ -635,10 +641,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 C.NOTIFICATION_CHANNEL,
-                "Default channel",
+                "Location Updates",
                 NotificationManager.IMPORTANCE_LOW
-            ).apply { description = "Default channel" }
-            (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+            )
+            channel.description = "Displays location updates in the background"
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager?.createNotificationChannel(channel)
         }
     }
 

@@ -10,11 +10,14 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 
 class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     private var googleMap: GoogleMap? = null
     private var coordinates: List<LatLng>? = null
+    private var checkpointCoordinates: List<LatLng>? = null
+
 
     @SuppressLint("WrongViewCast", "SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +50,12 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
             // Parse the track string into a list of LatLng coordinates
             coordinates = parseTrack(track)
+
+            val checkpoints = dbHelper.getCheckpointsForSession(sessionId)
+            checkpointCoordinates = checkpoints.map { LatLng(it.latitude, it.longitude) }
+            Log.d("DB", "checkpoint coordinates: $checkpointCoordinates")
+
+
             updateSessionText(distance, time, pace)
         }
     }
@@ -86,6 +95,12 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
             if (coordinates.isNotEmpty()) {
                 val firstPoint = coordinates[0]
                 it.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPoint, 15f))
+            }
+
+            if (checkpointCoordinates?.isNotEmpty() == true) {
+                for (coordinate in checkpointCoordinates!!) {
+                    it.addMarker(MarkerOptions().position(coordinate))
+                }
             }
         }
     }

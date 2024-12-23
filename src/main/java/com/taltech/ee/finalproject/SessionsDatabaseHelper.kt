@@ -10,7 +10,7 @@ import android.database.sqlite.SQLiteOpenHelper
 class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
         private const val DATABASE_NAME = "sessions.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         // Table name and column names
         const val TABLE_NAME = "sessions"
@@ -19,6 +19,14 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         const val COLUMN_DISTANCE = "distance"
         const val COLUMN_TIME = "time"
         const val COLUMN_PACE = "pace"
+
+        // Table name and column names for checkpoints
+        const val TABLE_CHECKPOINTS = "checkpoints"
+        const val COLUMN_CHECKPOINT_ID = "id"
+        const val COLUMN_SESSION_ID = "session_id"
+        const val COLUMN_LATITUDE = "latitude"
+        const val COLUMN_LONGITUDE = "longitude"
+
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -32,14 +40,26 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             );
         """
         db.execSQL(createTableQuery)
+
+        val createCheckpointsTableQuery = """
+            CREATE TABLE $TABLE_CHECKPOINTS (
+                $COLUMN_CHECKPOINT_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                $COLUMN_SESSION_ID INTEGER,
+                $COLUMN_LATITUDE REAL,
+                $COLUMN_LONGITUDE REAL,
+                FOREIGN KEY($COLUMN_SESSION_ID) REFERENCES $TABLE_NAME($COLUMN_ID)
+            );
+        """
+        db.execSQL(createCheckpointsTableQuery)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_CHECKPOINTS")
         db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
         onCreate(db)
     }
 
-    fun insertSession(track: String, distance: Float, time: Long, pace: String) {
+    fun insertSession(track: String, distance: Float, time: Long, pace: String): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_TRACK, track)
@@ -47,8 +67,44 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             put(COLUMN_TIME, time)
             put(COLUMN_PACE, pace)
         }
-        db.insert(TABLE_NAME, null, values)
+        val sessionId = db.insert(TABLE_NAME, null, values)
         db.close()
+        return sessionId
+    }
+
+
+    fun insertCheckpoint(sessionId: Long, latitude: Double, longitude: Double) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_SESSION_ID, sessionId)
+            put(COLUMN_LATITUDE, latitude)
+            put(COLUMN_LONGITUDE, longitude)
+        }
+        db.insert(TABLE_CHECKPOINTS, null, values)
+        db.close()
+    }
+
+    @SuppressLint("Range")
+    fun getCheckpointsForSession(sessionId: Long): List<Checkpoint> {
+        val db = readableDatabase
+        val cursor = db.query(
+            TABLE_CHECKPOINTS,
+            arrayOf(COLUMN_CHECKPOINT_ID, COLUMN_LATITUDE, COLUMN_LONGITUDE),
+            "$COLUMN_SESSION_ID = ?",
+            arrayOf(sessionId.toString()),
+            null, null, "$COLUMN_CHECKPOINT_ID DESC"
+        )
+
+        val checkpoints = mutableListOf<Checkpoint>()
+        while (cursor.moveToNext()) {
+            val id = cursor.getLong(cursor.getColumnIndex(COLUMN_CHECKPOINT_ID))
+            val latitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_LATITUDE))
+            val longitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_LONGITUDE))
+            checkpoints.add(Checkpoint(id, sessionId, latitude, longitude))
+        }
+        cursor.close()
+        db.close()
+        return checkpoints
     }
 
     fun getAllSessions(): Cursor {
@@ -80,6 +136,14 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
 
         return session
     }
+
+    fun clearDatabase() {
+        val db = writableDatabase
+        db.execSQL("DELETE FROM $TABLE_CHECKPOINTS")
+        db.execSQL("DELETE FROM $TABLE_NAME")
+        db.close()
+    }
+
 
     fun deleteAllSessions() {
         val db = writableDatabase

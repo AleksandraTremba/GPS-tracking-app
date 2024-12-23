@@ -7,11 +7,6 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.MapView
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.PolylineOptions
 
 class SavedSessionsActivity : AppCompatActivity() {
     private lateinit var sessionsListView: ListView
@@ -50,6 +45,11 @@ class SavedSessionsActivity : AppCompatActivity() {
                 putExtra("SESSION_ID", sessionId)
             }
             startActivity(intent)
+        }
+
+        var deleteButton = findViewById<Button>(R.id.delete_button)
+        deleteButton.setOnClickListener{
+            dbHelper.clearDatabase()
         }
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, sessionList)
         sessionsListView.adapter = adapter

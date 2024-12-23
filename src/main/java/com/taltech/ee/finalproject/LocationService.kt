@@ -1,16 +1,21 @@
 package com.taltech.ee.finalproject
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.location.Location
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import android.widget.RemoteViews
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -52,16 +57,8 @@ class LocationService : Service() {
 
 
     override fun onCreate() {
-        Log.d(TAG, "onCreate")
         super.onCreate()
-
-        broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
-        broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
         broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
-
-
-//        registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
-
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -73,10 +70,12 @@ class LocationService : Service() {
         }
 
         getLastLocation()
-
         createLocationRequest()
         requestLocationUpdates()
 
+        // Initialize the notification
+        startForegroundServiceWithNotification()
+        createNotificationChannel()
     }
 
     fun requestLocationUpdates() {
@@ -97,9 +96,22 @@ class LocationService : Service() {
         }
     }
 
+    private fun startForegroundServiceWithNotification() {
+        val notifyView = RemoteViews(packageName, R.layout.notification_layout)
+
+        val notification = NotificationCompat.Builder(this, C.NOTIFICATION_CHANNEL)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setCustomContentView(notifyView)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        startForeground(C.NOTIFICATION_ID, notification)
+    }
+
     private fun onNewLocation(location: Location) {
         Log.i(TAG, "New location: $location")
-        if (currentLocation == null){
+        if (currentLocation == null) {
             locationStart = location
             locationCP = location
             locationWP = location
@@ -113,17 +125,14 @@ class LocationService : Service() {
             distanceWPDirect = locationWP?.let { location.distanceTo(it) }!!
             distanceWPTotal += location.distanceTo(currentLocation!!)
         }
-        // save the location for calculations
         currentLocation = location
 
-//        showNotification()
+        updateNotification()
 
-        // broadcast new location to UI
         val intent = Intent(C.LOCATION_UPDATE_ACTION)
         intent.putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, location.latitude)
         intent.putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, location.longitude)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-
     }
 
     private fun createLocationRequest() {
@@ -132,6 +141,21 @@ class LocationService : Service() {
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
         mLocationRequest.setMaxWaitTime(UPDATE_INTERVAL_IN_MILLISECONDS)
     }
+
+    private fun createNotificationChannel() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val name = "Location Updates"
+            val descriptionText = "Channel for location updates"
+            val importance = NotificationManager.IMPORTANCE_LOW
+            val channel = NotificationChannel(C.NOTIFICATION_CHANNEL, name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
 
 
     private fun getLastLocation() {
@@ -149,6 +173,33 @@ class LocationService : Service() {
         } catch (unlikely: SecurityException) {
             Log.e(TAG, "Lost location permission.$unlikely")
         }
+    }
+
+    private fun updateNotification() {
+        val notifyView = RemoteViews(packageName, R.layout.notification_layout)
+
+        val notification = NotificationCompat.Builder(this, C.NOTIFICATION_CHANNEL)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setCustomContentView(notifyView)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        NotificationManagerCompat.from(this).notify(C.NOTIFICATION_ID, notification)
     }
 
 
@@ -195,7 +246,7 @@ class LocationService : Service() {
         distanceWPTotal = 0f
 
 
-//        showNotification()
+        showNotification()
 
         return START_STICKY
         //return super.onStartCommand(intent, flags, startId)
@@ -216,6 +267,27 @@ class LocationService : Service() {
         return super.onUnbind(intent)
 
     }
+
+    fun showNotification() {
+        val notifyView = RemoteViews(packageName, R.layout.notification_layout)
+        notifyView.setTextViewText(
+            R.id.notification_details,
+            "Distance: %.2f m".format(distanceOverallTotal)
+        )
+
+        val builder = NotificationCompat.Builder(this, C.NOTIFICATION_CHANNEL)
+            .setSmallIcon(R.mipmap.ic_launcher) // Replace with your icon
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setCustomContentView(notifyView)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+        builder.setContent(notifyView)
+
+        startForeground(C.NOTIFICATION_ID, builder.build())
+    }
+
+
 
 //    fun showNotification(){
 //        val intentCp = Intent(C.NOTIFICATION_ACTION_CP)
@@ -255,25 +327,10 @@ class LocationService : Service() {
 //    }
 //
 //
-//    private inner class InnerBroadcastReceiver: BroadcastReceiver() {
-//        override fun onReceive(context: Context?, intent: Intent?) {
-//            Log.d(TAG, intent!!.action)
-//            when(intent!!.action){
-//                C.NOTIFICATION_ACTION_WP -> {
-//                    locationWP = currentLocation
-//                    distanceWPDirect = 0f
-//                    distanceWPTotal = 0f
-//                    showNotification()
-//                }
-//                C.NOTIFICATION_ACTION_CP -> {
-//                    locationCP = currentLocation
-//                    distanceCPDirect = 0f
-//                    distanceCPTotal = 0f
-//                    showNotification()
-//                }
-//            }
-//        }
+    private inner class InnerBroadcastReceiver: BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent!!.action?.let { Log.d(TAG, it) }
+        }
 
-//    }
-
+    }
 }
