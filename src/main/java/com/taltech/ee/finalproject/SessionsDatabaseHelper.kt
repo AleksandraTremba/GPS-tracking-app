@@ -10,7 +10,7 @@ import android.database.sqlite.SQLiteOpenHelper
 class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
         private const val DATABASE_NAME = "sessions.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
 
         // Table name and column names
         const val TABLE_NAME = "sessions"
@@ -27,6 +27,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         const val COLUMN_SESSION_ID = "session_id"
         const val COLUMN_LATITUDE = "latitude"
         const val COLUMN_LONGITUDE = "longitude"
+        const val COLUMN_TIMESTAMP = "timestamp"
 
     }
 
@@ -49,6 +50,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
                 $COLUMN_SESSION_ID INTEGER,
                 $COLUMN_LATITUDE REAL,
                 $COLUMN_LONGITUDE REAL,
+                $COLUMN_TIMESTAMP INTEGER,
                 FOREIGN KEY($COLUMN_SESSION_ID) REFERENCES $TABLE_NAME($COLUMN_ID)
             );
         """
@@ -76,23 +78,25 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
     }
 
 
-    fun insertCheckpoint(sessionId: Long, latitude: Double, longitude: Double) {
+    fun insertCheckpoint(sessionId: Long, latitude: Double, longitude: Double, timestamp: Long) {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_SESSION_ID, sessionId)
             put(COLUMN_LATITUDE, latitude)
             put(COLUMN_LONGITUDE, longitude)
+            put(COLUMN_TIMESTAMP, timestamp)
         }
         db.insert(TABLE_CHECKPOINTS, null, values)
         db.close()
     }
+
 
     @SuppressLint("Range")
     fun getCheckpointsForSession(sessionId: Long): List<Checkpoint> {
         val db = readableDatabase
         val cursor = db.query(
             TABLE_CHECKPOINTS,
-            arrayOf(COLUMN_CHECKPOINT_ID, COLUMN_LATITUDE, COLUMN_LONGITUDE),
+            arrayOf(COLUMN_CHECKPOINT_ID, COLUMN_LATITUDE, COLUMN_LONGITUDE, COLUMN_TIMESTAMP),  // Include timestamp
             "$COLUMN_SESSION_ID = ?",
             arrayOf(sessionId.toString()),
             null, null, "$COLUMN_CHECKPOINT_ID DESC"
@@ -103,12 +107,14 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             val id = cursor.getLong(cursor.getColumnIndex(COLUMN_CHECKPOINT_ID))
             val latitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_LATITUDE))
             val longitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_LONGITUDE))
-            checkpoints.add(Checkpoint(id, sessionId, latitude, longitude))
+            val timestamp = cursor.getLong(cursor.getColumnIndex(COLUMN_TIMESTAMP))
+            checkpoints.add(Checkpoint(id, sessionId, latitude, longitude, timestamp))
         }
         cursor.close()
         db.close()
         return checkpoints
     }
+
 
     fun getAllSessions(): Cursor {
         val db = readableDatabase

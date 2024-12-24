@@ -18,9 +18,11 @@ import android.widget.ImageButton
 import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -82,7 +84,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var totalDistance: Float = 0f
     private var lastUpdateTime: Long = 0
 
-    private val checkpointMarkers: MutableList<Marker> = mutableListOf()
+    private val checkpointMarkers: MutableList<Pair<Marker, Long>> = mutableListOf()
     private var lastCheckpoint: MarkerOptions? = null
     private var lastCheckpointTime: Long = 0
 
@@ -122,7 +124,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         startStopButton.setOnClickListener {
             if (startStopButton.text == "Stop") {
-                showPopupWindow()
+                alertStopSession()
             } else {
                 startTracking()
             }
@@ -171,6 +173,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         startLocationService()
     }
 
+    private fun alertStopSession() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("End the session")
+        builder.setMessage("Do you want to end the session?")
+
+        builder.setPositiveButton("End") { _, _ ->
+            stopTracking()
+        }
+        builder.setNegativeButton("Cancel", null)
+
+        builder.show()
+    }
+
     private fun showPopupWindow() {
         val inflater = LayoutInflater.from(this)
         val popupView = inflater.inflate(R.layout.popup_window, null)
@@ -215,13 +230,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     .position(latLng)
                     .title("Checkpoint")
                     .snippet("Lat: ${latLng.latitude}, Lng: ${latLng.longitude}")
+                val currentTime = System.currentTimeMillis()
                 var checkpointMarker = mMap.addMarker(checkpointMarkerOptions)
 
-                checkpointMarker?.let { checkpointMarkers.add(it) }
+                checkpointMarker?.let {
+                    checkpointMarkers.add(Pair(it, currentTime))
+                }
                 Log.d("DB", "checkpoint markers: $checkpointMarkers")
 
                 lastCheckpoint = checkpointMarkerOptions
-                val currentTime = System.currentTimeMillis()
                 lastCheckpointTime = currentTime
 
                 Toast.makeText(this, "Checkpoint added.", Toast.LENGTH_SHORT).show()
@@ -471,9 +488,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         updateDistanceTextView()
         updateCheckpointDistanceTextView()
         updateWaypointDistanceTextView()
+        broadcastLocationUpdates()
 
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
     }
+
+    private fun broadcastLocationUpdates() {
+        val intent = Intent(C.LOCATION_UPDATE_ACTION)
+        intent.putExtra("totalDistance", totalDistance)
+        intent.putExtra("checkpointDistance", checkpointDistance)
+        intent.putExtra("waypointDistance", waypointDistance)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
 
 
     private fun updateDistanceTextView() {
@@ -546,9 +573,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mPolyline?.remove()
 
 
-        checkpointMarkers.forEach { marker ->
+        checkpointMarkers.forEach { (marker, _) ->
             marker.remove()
         }
+
         checkpointMarkers.clear()  // Clear the list of checkpoint markers
 
         // Remove current waypoint marker (if needed)
@@ -586,12 +614,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val dbHelper = SessionsDatabaseHelper(this)
         val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace)
 
-        // Save all checkpoints for the session
-        for (marker in checkpointMarkers) {
+        for ((marker, timestamp) in checkpointMarkers) {
             val latitude = marker.position.latitude
             val longitude = marker.position.longitude
-            dbHelper.insertCheckpoint(sessionId, latitude, longitude)
+            dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
         }
+
 
         Toast.makeText(this, "Session and checkpoints saved.", Toast.LENGTH_SHORT).show()
     }

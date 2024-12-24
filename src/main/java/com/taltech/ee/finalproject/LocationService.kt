@@ -1,5 +1,6 @@
 package com.taltech.ee.finalproject
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -157,22 +158,23 @@ class LocationService : Service() {
         Log.d(TAG, "onDestroy")
         super.onDestroy()
 
-        //stop location updates
+        // Stop location updates
         mLocationCallback?.let { mFusedLocationClient.removeLocationUpdates(it) }
 
-        // remove notifications
-        NotificationManagerCompat.from(this).cancelAll()
+        // Remove notifications
+        NotificationManagerCompat.from(this).cancel(C.NOTIFICATION_ID)
 
-
-        // don't forget to unregister brodcast receiver!!!!
+        // Unregister broadcast receiver
         unregisterReceiver(broadcastReceiver)
 
+        // Stop the foreground service
+        stopForeground(true)
 
-        // broadcast stop to UI
+        // Broadcast stop to UI
         val intent = Intent(C.LOCATION_UPDATE_ACTION)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-
     }
+
 
     override fun onLowMemory() {
         Log.d(TAG, "onLowMemory")
@@ -218,6 +220,15 @@ class LocationService : Service() {
 
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        Log.d(TAG, "onTaskRemoved")
+        super.onTaskRemoved(rootIntent)
+
+        // Stop the service
+        stopSelf()
+    }
+
+    @SuppressLint("ForegroundServiceType")
     fun showNotification(){
         val intentCp = Intent(C.NOTIFICATION_ACTION_CP)
         val intentWp = Intent(C.NOTIFICATION_ACTION_WP)
