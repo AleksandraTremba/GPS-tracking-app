@@ -15,21 +15,14 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/textViewOverallDirect"
+            android:id="@+id/overallDistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/textViewOverallTotal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/textViewOverallTempo"
+            android:id="@+id/overallPace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
@@ -56,21 +49,14 @@
 
 
         <TextView
-            android:id="@+id/textViewCPDirect"
+            android:id="@+id/CPdistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/textViewCPTotal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/textViewCPTempo"
+            android:id="@+id/CPpace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
@@ -95,21 +81,14 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/textViewWPDirect"
+            android:id="@+id/WPdistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/textViewWPTotal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
-
-        <TextView
-            android:id="@+id/textViewWPTempo"
+            android:id="@+id/WPpace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"

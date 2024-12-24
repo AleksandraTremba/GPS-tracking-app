@@ -57,13 +57,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var track: MutableList<String> = mutableListOf()
 
-    private lateinit var optionsButton: Button
+    private lateinit var optionsButton: ImageButton
     private lateinit var orientationTextView: TextView
 
     private var previousLocation: Location? = null
 
     // UI elements
-    private lateinit var startStopButton: Button
+    private lateinit var startStopButton: ImageButton
     private lateinit var timeElapsedTextView: TextView
 
     private lateinit var timeElapsedCheckpoint: TextView
@@ -82,6 +82,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var locationServiceActive = false
 
     private var totalDistance: Float = 0f
+    private var totalPace = 0f
     private var lastUpdateTime: Long = 0
 
     private val checkpointMarkers: MutableList<Pair<Marker, Long>> = mutableListOf()
@@ -92,8 +93,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var lastWaypointTime: Long = 0
 
     private var checkpointDistance: Float = 0f
+    private var checkpointPace = 0f
 
     private var waypointDistance: Float = 0f
+    private var waypointPace = 0f
 
 
 
@@ -123,7 +126,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         timeElapsedWaypoint = findViewById(R.id.time_elapsed_waypoint)
 
         startStopButton.setOnClickListener {
-            if (startStopButton.text == "Stop") {
+            if (isTracking) {
                 alertStopSession()
             } else {
                 startTracking()
@@ -434,6 +437,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // Calculate pace (time per kilometer)
             if (totalDistance > 0) {
                 val pace = if (elapsedTime > 0) (elapsedTime / (distance / 1000)) else 0f // seconds/km
+                totalPace = pace
                 updatePaceTextView(pace)
             }
 
@@ -450,13 +454,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             var distanceToCheckpoint = locationToCheckpoint?.let { it1 -> it.distanceTo(it1) }
             if (distanceToCheckpoint != null) {
-                checkpointDistance = distanceToCheckpoint
+                checkpointDistance += distanceToCheckpoint
             }
 
             val elapsedTimeCheckpoint = (currentTime - lastCheckpointTime) / 1000f // in seconds
 
             if (distanceToCheckpoint != null && distanceToCheckpoint > 0) {
                 val pace = if (elapsedTimeCheckpoint > 0) (elapsedTimeCheckpoint / (distanceToCheckpoint / 1000)) else 0f // seconds/km
+                checkpointPace = pace
                 updateCheckpointPaceTextView(pace)
             }
 
@@ -477,6 +482,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             if (distanceToWaypoint != null && distanceToWaypoint > 0) {
                 val pace = if (elapsedTimeWaypoint > 0) (elapsedTimeWaypoint / (distanceToWaypoint / 1000)) else 0f // seconds/km
+                waypointPace = pace
                 updateWaypointPaceTextView(pace)
             }
 
@@ -498,6 +504,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         intent.putExtra("totalDistance", totalDistance)
         intent.putExtra("checkpointDistance", checkpointDistance)
         intent.putExtra("waypointDistance", waypointDistance)
+        intent.putExtra("totalPace", totalPace)
+        intent.putExtra("checkpointPace", checkpointPace)
+        intent.putExtra("waypointPace", waypointPace)
+        Log.d("NOTIF", "sent: overall distance $totalDistance, " +
+                "cp distance $checkpointDistance, wp distance $waypointPace")
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
@@ -549,7 +560,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun startTracking() {
         isTracking = true
-        startStopButton.text = "Stop"
+        startStopButton.setImageResource(R.drawable.pause)
+
         startTime = System.currentTimeMillis()
         elapsedTimeHandler.postDelayed(updateElapsedTimeRunnable, 1000)
         startLocationUpdates()
@@ -560,7 +572,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun stopTracking() {
         isTracking = false
-        startStopButton.text = "Start"
+        startStopButton.setImageResource(R.drawable.play)
         elapsedTimeHandler.removeCallbacks(updateElapsedTimeRunnable)
         mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // Stop location updates
 
@@ -590,6 +602,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         lastCheckpoint = null
         lastCheckpointTime = 0L
         currentWaypointMarker = null
+        totalPace = 0f
+        checkpointPace = 0f
+        waypointPace = 0f
     }
 
     private fun saveSessionData() {
@@ -734,10 +749,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 C.LOCATION_UPDATE_ACTION -> {
-                    findViewById<TextView>(R.id.textViewLatitude).text =
-                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, 0.0).toString()
-                    findViewById<TextView>(R.id.textViewLongitude).text =
-                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, 0.0).toString()
+                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, 0.0)
+                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, 0.0)
                 }
             }
         }

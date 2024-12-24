@@ -40,14 +40,17 @@ class LocationService : Service() {
 
     private var distanceOverallDirect = 0f
     private var distanceOverallTotal = 0f
+    private var paceOverall = 0f
     private var locationStart: Location? = null
 
     private var distanceCPDirect = 0f
     private var distanceCPTotal = 0f
+    private var paceCP = 0f
     private var locationCP: Location? = null
 
     private var distanceWPDirect = 0f
     private var distanceWPTotal = 0f
+    private var paceWP = 0f
     private var locationWP: Location? = null
 
 
@@ -242,16 +245,18 @@ class LocationService : Service() {
 
         notifyview.setOnClickPendingIntent(R.id.imageButtonCP, pendingIntentCp)
         notifyview.setOnClickPendingIntent(R.id.imageButtonWP, pendingIntentWp)
+        Log.d("NOTIF", "showNotification: overall distance $distanceOverallTotal, " +
+                "cp distance $distanceCPTotal, wp distance $distanceWPTotal")
 
 
-        notifyview.setTextViewText(R.id.textViewOverallDirect, "%.2f".format(distanceOverallDirect))
-        notifyview.setTextViewText(R.id.textViewOverallTotal, "%.2f".format(distanceOverallTotal))
+        notifyview.setTextViewText(R.id.overallDistance, "%.2f".format(distanceOverallTotal))
+        notifyview.setTextViewText(R.id.overallPace, "%.2f".format(paceOverall))
 
-        notifyview.setTextViewText(R.id.textViewWPDirect, "%.2f".format(distanceWPDirect))
-        notifyview.setTextViewText(R.id.textViewWPTotal, "%.2f".format(distanceWPTotal))
+        notifyview.setTextViewText(R.id.WPdistance, "%.2f".format(distanceWPTotal))
+        notifyview.setTextViewText(R.id.WPpace, "%.2f".format(paceWP))
 
-        notifyview.setTextViewText(R.id.textViewCPDirect, "%.2f".format(distanceCPDirect))
-        notifyview.setTextViewText(R.id.textViewCPTotal, "%.2f".format(distanceCPTotal))
+        notifyview.setTextViewText(R.id.CPdistance, "%.2f".format(distanceCPTotal))
+        notifyview.setTextViewText(R.id.CPpace, "%.2f".format(paceCP))
 
         // construct and show notification
         var builder = NotificationCompat.Builder(applicationContext, C.NOTIFICATION_CHANNEL)
@@ -273,6 +278,29 @@ class LocationService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent!!.action?.let { Log.d(TAG, it) }
             when(intent!!.action){
+                C.LOCATION_UPDATE_ACTION -> {
+                    val totalDistance = intent.getFloatExtra("totalDistance", 0f)
+                    val checkpointDistance = intent.getFloatExtra("checkpointDistance", 0f)
+                    val waypointDistance = intent.getFloatExtra("waypointDistance", 0f)
+                    val totalPace = intent.getFloatExtra("totalPace", 0f)
+                    val checkpointPace = intent.getFloatExtra("checkpointPace", 0f)
+                    val waypointPace = intent.getFloatExtra("waypointPace", 0f)
+
+                    Log.d("NOTIF", "recieved: overall distance $totalDistance, " +
+                            "cp distance $checkpointDistance, wp distance $waypointPace")
+
+                    distanceOverallTotal = totalDistance
+                    distanceCPTotal = checkpointDistance
+                    distanceWPTotal = waypointDistance
+
+                    paceOverall = totalPace
+                    paceCP = checkpointPace
+                    paceWP = waypointPace
+
+
+                    // Update the notification
+                    showNotification()
+                }
                 C.NOTIFICATION_ACTION_WP -> {
                     locationWP = currentLocation
                     distanceWPDirect = 0f
