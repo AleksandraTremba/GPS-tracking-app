@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -146,15 +147,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
-        mLocationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                super.onLocationResult(locationResult)
-                locationResult.lastLocation?.let {
-                    Log.d(TAG, "Location update: $it")
-                    onNewLocation(it)
-                }
-            }
-        }
+//        mLocationCallback = object : LocationCallback() {
+//            override fun onLocationResult(locationResult: LocationResult) {
+//                super.onLocationResult(locationResult)
+//                locationResult.lastLocation?.let {
+//                    Log.d(TAG, "Location update: $it")
+////                    onNewLocation(it)
+//                }
+//            }
+//        }
 
         if (!checkPermissions()) {
             requestPermissions()
@@ -174,6 +175,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Set initial text based on preferences
         orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
         startLocationService()
+
+        val intentFilter = IntentFilter().apply {
+            addAction(C.LOCATION_UPDATE_ACTION)
+            addAction(C.ACTION_UPDATE_TRACKING)
+        }
+        registerReceiver(broadcastReceiver, intentFilter)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unregisterReceiver(broadcastReceiver) // Always unregister when the activity stops
     }
 
     private fun alertStopSession() {
@@ -399,118 +411,118 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         // Pass this new location to your `onNewLocation` function
-        onNewLocation(newLocation)
+//        onNewLocation(newLocation)
 
         // Schedule the next update in 2 seconds
         elapsedTimeHandler.postDelayed({ simulateMovement() }, 2000)
     }
 
 
-    private fun onNewLocation(location: Location) {
-        if (!isTracking) {
-            return // Don't calculate distance or update data if tracking is not active
-        }
-
-        // Convert the location to LatLng
-        val latLng = LatLng(location.latitude, location.longitude)
-
-        // If we have a previous location, draw a polyline
-        previousLocation?.let {
-            val previousLatLng = LatLng(it.latitude, it.longitude)
-
-            // Create a polyline from previous location to the new one
-            val polyline = mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
-            polylines.add(polyline)
-            track.add("${location.latitude},${location.longitude},${it.latitude},${it.longitude}")
-        }
-
-        val currentTime = System.currentTimeMillis()
-
-        // Calculate distance if there is a previous location
-        previousLocation?.let {
-            val distance = it.distanceTo(location) // Distance in meters
-            totalDistance += distance // Add to total distance
-
-            // Calculate elapsed time since last update
-            val elapsedTime = (currentTime - lastUpdateTime) / 1000f // in seconds
-
-            // Calculate pace (time per kilometer)
-            if (totalDistance > 0) {
-                val pace = if (elapsedTime > 0) (elapsedTime / (distance / 1000)) else 0f // seconds/km
-                totalPace = pace
-                updatePaceTextView(pace)
-            }
-
-            // Calculate distances for Checkpoint and Waypoint only if they exist
-
-            // Checkpoint
-            var positionToCheckpoint = lastCheckpoint?.position
-            val locationToCheckpoint = positionToCheckpoint?.let {
-                Location("").apply {
-                    latitude = it.latitude
-                    longitude = it.longitude
-                }
-            }
-
-            var distanceToCheckpoint = locationToCheckpoint?.let { it1 -> it.distanceTo(it1) }
-            if (distanceToCheckpoint != null) {
-                checkpointDistance += distanceToCheckpoint
-            }
-
-            val elapsedTimeCheckpoint = (currentTime - lastCheckpointTime) / 1000f // in seconds
-
-            if (distanceToCheckpoint != null && distanceToCheckpoint > 0) {
-                val pace = if (elapsedTimeCheckpoint > 0) (elapsedTimeCheckpoint / (distanceToCheckpoint / 1000)) else 0f // seconds/km
-                checkpointPace = pace
-                updateCheckpointPaceTextView(pace)
-            }
-
-            // Waypoint
-            var positionToWaypoint = currentWaypointMarker?.position
-            val locationToWaypoint = positionToWaypoint?.let {
-                Location("").apply {
-                    latitude = it.latitude
-                    longitude = it.longitude
-                }
-            }
-
-            var distanceToWaypoint = locationToWaypoint?.let { it1 -> it.distanceTo(it1) }
-            if (distanceToWaypoint != null) {
-                waypointDistance += distanceToWaypoint
-            }
-            val elapsedTimeWaypoint = (currentTime - lastWaypointTime) / 1000f // in seconds
-
-            if (distanceToWaypoint != null && distanceToWaypoint > 0) {
-                val pace = if (elapsedTimeWaypoint > 0) (elapsedTimeWaypoint / (distanceToWaypoint / 1000)) else 0f // seconds/km
-                waypointPace = pace
-                updateWaypointPaceTextView(pace)
-            }
-
-        }
-
-        lastUpdateTime = currentTime
-        previousLocation = location
-
-        updateDistanceTextView()
-        updateCheckpointDistanceTextView()
-        updateWaypointDistanceTextView()
-        broadcastLocationUpdates()
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
-    }
-
-    private fun broadcastLocationUpdates() {
-        val intent = Intent(C.LOCATION_UPDATE_ACTION)
-        intent.putExtra("totalDistance", totalDistance)
-        intent.putExtra("checkpointDistance", checkpointDistance)
-        intent.putExtra("waypointDistance", waypointDistance)
-        intent.putExtra("totalPace", totalPace)
-        intent.putExtra("checkpointPace", checkpointPace)
-        intent.putExtra("waypointPace", waypointPace)
-        Log.d("NOTIF", "sent: overall distance $totalDistance, " +
-                "cp distance $checkpointDistance, wp distance $waypointPace")
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-    }
+//    private fun onNewLocation(location: Location) {
+//        if (!isTracking) {
+//            return // Don't calculate distance or update data if tracking is not active
+//        }
+//
+//        // Convert the location to LatLng
+//        val latLng = LatLng(location.latitude, location.longitude)
+//
+//        // If we have a previous location, draw a polyline
+//        previousLocation?.let {
+//            val previousLatLng = LatLng(it.latitude, it.longitude)
+//
+//            // Create a polyline from previous location to the new one
+//            val polyline = mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
+//            polylines.add(polyline)
+//            track.add("${location.latitude},${location.longitude},${it.latitude},${it.longitude}")
+//        }
+//
+//        val currentTime = System.currentTimeMillis()
+//
+//        // Calculate distance if there is a previous location
+//        previousLocation?.let {
+//            val distance = it.distanceTo(location) // Distance in meters
+//            totalDistance += distance // Add to total distance
+//
+//            // Calculate elapsed time since last update
+//            val elapsedTime = (currentTime - lastUpdateTime) / 1000f // in seconds
+//
+//            // Calculate pace (time per kilometer)
+//            if (totalDistance > 0) {
+//                val pace = if (elapsedTime > 0) (elapsedTime / (distance / 1000)) else 0f // seconds/km
+//                totalPace = pace
+//                updatePaceTextView(pace)
+//            }
+//
+//            // Calculate distances for Checkpoint and Waypoint only if they exist
+//
+//            // Checkpoint
+//            var positionToCheckpoint = lastCheckpoint?.position
+//            val locationToCheckpoint = positionToCheckpoint?.let {
+//                Location("").apply {
+//                    latitude = it.latitude
+//                    longitude = it.longitude
+//                }
+//            }
+//
+//            var distanceToCheckpoint = locationToCheckpoint?.let { it1 -> it.distanceTo(it1) }
+//            if (distanceToCheckpoint != null) {
+//                checkpointDistance += distanceToCheckpoint
+//            }
+//
+//            val elapsedTimeCheckpoint = (currentTime - lastCheckpointTime) / 1000f // in seconds
+//
+//            if (distanceToCheckpoint != null && distanceToCheckpoint > 0) {
+//                val pace = if (elapsedTimeCheckpoint > 0) (elapsedTimeCheckpoint / (distanceToCheckpoint / 1000)) else 0f // seconds/km
+//                checkpointPace = pace
+//                updateCheckpointPaceTextView(pace)
+//            }
+//
+//            // Waypoint
+//            var positionToWaypoint = currentWaypointMarker?.position
+//            val locationToWaypoint = positionToWaypoint?.let {
+//                Location("").apply {
+//                    latitude = it.latitude
+//                    longitude = it.longitude
+//                }
+//            }
+//
+//            var distanceToWaypoint = locationToWaypoint?.let { it1 -> it.distanceTo(it1) }
+//            if (distanceToWaypoint != null) {
+//                waypointDistance += distanceToWaypoint
+//            }
+//            val elapsedTimeWaypoint = (currentTime - lastWaypointTime) / 1000f // in seconds
+//
+//            if (distanceToWaypoint != null && distanceToWaypoint > 0) {
+//                val pace = if (elapsedTimeWaypoint > 0) (elapsedTimeWaypoint / (distanceToWaypoint / 1000)) else 0f // seconds/km
+//                waypointPace = pace
+//                updateWaypointPaceTextView(pace)
+//            }
+//
+//        }
+//
+//        lastUpdateTime = currentTime
+//        previousLocation = location
+//
+//        updateDistanceTextView()
+//        updateCheckpointDistanceTextView()
+//        updateWaypointDistanceTextView()
+//        broadcastLocationUpdates()
+//
+//        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
+//    }
+//
+//    private fun broadcastLocationUpdates() {
+//        val intent = Intent(C.LOCATION_UPDATE_ACTION)
+//        intent.putExtra("totalDistance", totalDistance)
+//        intent.putExtra("checkpointDistance", checkpointDistance)
+//        intent.putExtra("waypointDistance", waypointDistance)
+//        intent.putExtra("totalPace", totalPace)
+//        intent.putExtra("checkpointPace", checkpointPace)
+//        intent.putExtra("waypointPace", waypointPace)
+//        Log.d("NOTIF", "sent: overall distance $totalDistance, " +
+//                "cp distance $checkpointDistance, wp distance $waypointPace")
+//        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+//    }
 
 
 
@@ -558,13 +570,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
 
+    private fun updateTrackingState(isTracking: Boolean) {
+        val intent = Intent(C.ACTION_UPDATE_TRACKING).apply {
+            putExtra(C.EXTRA_IS_TRACKING, isTracking)
+        }
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+    }
+
+
+
     private fun startTracking() {
         isTracking = true
+        updateTrackingState(isTracking)
         startStopButton.setImageResource(R.drawable.pause)
 
         startTime = System.currentTimeMillis()
         elapsedTimeHandler.postDelayed(updateElapsedTimeRunnable, 1000)
-        startLocationUpdates()
+//        startLocationUpdates()
+
 
 //        simulateMovement()
     }
@@ -572,6 +595,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun stopTracking() {
         isTracking = false
+        updateTrackingState(isTracking)
         startStopButton.setImageResource(R.drawable.play)
         elapsedTimeHandler.removeCallbacks(updateElapsedTimeRunnable)
         mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // Stop location updates
@@ -724,33 +748,51 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == C.REQUEST_PERMISSIONS_REQUEST_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startLocationUpdates()
+//            startLocationUpdates()
         } else {
             Toast.makeText(this, "Permission Denied!", Toast.LENGTH_SHORT).show()
         }
     }
 
-    private fun startLocationUpdates() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-        mFusedLocationClient.requestLocationUpdates(
-            LocationRequest.create().apply {
-                interval = 2000 // Update every 2 seconds
-                fastestInterval = 1000 // Fastest update every 1 second
-                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-            },
-            mLocationCallback!!,
-            mainLooper
-        )
-    }
+//    private fun startLocationUpdates() {
+//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//            return
+//        }
+//        mFusedLocationClient.requestLocationUpdates(
+//            LocationRequest.create().apply {
+//                interval = 2000 // Update every 2 seconds
+//                fastestInterval = 1000 // Fastest update every 1 second
+//                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+//            },
+//            mLocationCallback!!,
+//            mainLooper
+//        )
+//    }
 
     private inner class InnerBroadcastReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
                 C.LOCATION_UPDATE_ACTION -> {
-                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, 0.0)
-                        intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, 0.0)
+                    Log.d(TAG, "LOCATION UPDATED!!!!!!!")
+                    totalDistance = intent.getFloatExtra("totalDistance", 0f)
+                    val newPolyline =
+                        intent.getSerializableExtra("newPolyline") as? Pair<LatLng, LatLng>
+
+                    // Update UI
+                    updateDistanceTextView()
+
+                    // Draw new polyline on the map
+                    newPolyline?.let { (start, end) ->
+                        val polyline = mMap.addPolyline(
+                            PolylineOptions().add(start, end).color(Color.BLUE).width(5f)
+                        )
+                        polylines.add(polyline)
+                    }
+                }
+
+                C.ACTION_UPDATE_TRACKING -> {
+                    isTracking = intent.getBooleanExtra(C.EXTRA_IS_TRACKING, false)
+                    Log.d(TAG, "Tracking state updated: $isTracking")
                 }
             }
         }

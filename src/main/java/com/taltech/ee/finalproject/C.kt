@@ -5,6 +5,8 @@ class C {
         val NOTIFICATION_CHANNEL = "default_channel"
         val NOTIFICATION_ACTION_WP = "com.taltech.ee.finalproject.wp"
         val NOTIFICATION_ACTION_CP = "com.taltech.ee.finalproject.cp"
+        val ACTION_UPDATE_TRACKING = "com.taltech.ee.finalproject.UPDATE_TRACKING"
+        val EXTRA_IS_TRACKING = "isTracking"
 
         val LOCATION_UPDATE_ACTION = "com.taltech.ee.finalproject.location_update"
 
