@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -31,7 +32,6 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -39,10 +39,22 @@
         </activity>
         <activity android:name=".SessionMapActivity">
         </activity>
+        <receiver android:name=".MainActivity$InnerBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="C.LOCATION_UPDATE_ACTION" />
+                <action android:name="C.NOTIFICATION_ACTION_CP" />
+                <action android:name="C.NOTIFICATION_ACTION_WP" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".LocationService"
+            android:foregroundServiceType="location"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="true"
+            android:launchMode="singleTask"
+            tools:ignore="ForegroundServicePermission" />
 
     </application>
 

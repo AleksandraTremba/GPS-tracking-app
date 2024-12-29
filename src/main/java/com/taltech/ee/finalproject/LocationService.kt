@@ -17,7 +17,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
-import com.taltech.ee.finalproject.MainActivity.Companion
 
 
 class LocationService : Service() {
@@ -40,26 +39,16 @@ class LocationService : Service() {
     // last received location
     private var currentLocation: Location? = null
 
-//    private var distanceOverallTotal = 0f
-//    private var paceOverall = 0f
-//    private var locationStart: Location? = null
-//
-//    private var distanceCPTotal = 0f
-//    private var paceCP = 0f
-//    private var locationCP: Location? = null
-//
-//    private var distanceWPTotal = 0f
-//    private var paceWP = 0f
-//    private var locationWP: Location? = null
+    private var distanceOverallTotal = 0f
+    private var locationStart: Location? = null
 
-    private var isTracking = false
-    private var totalDistance = 0f
-    private var lastUpdateTime = 0L
+    private var distanceCPTotal = 0f
+    private var locationCP: Location? = null
+
+    private var distanceWPTotal = 0f
+    private var locationWP: Location? = null
+
     private var previousLocation: Location? = null
-    private val polylines = mutableListOf<Pair<LatLng, LatLng>>()
-
-    private val checkpointMarkers = mutableListOf<LatLng>()
-    private val waypointMarkers = mutableListOf<LatLng>()
 
 
 
@@ -70,7 +59,6 @@ class LocationService : Service() {
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
         broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
-        broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
 
 
         registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
@@ -81,9 +69,13 @@ class LocationService : Service() {
         mLocationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 super.onLocationResult(locationResult)
-                locationResult.lastLocation?.let {
-                    Log.d(TAG, "Location update: $it")
-                    onNewLocation(it) }
+                val location = locationResult.lastLocation
+                if (location != null) {
+                    Log.d(TAG, "Received location update: Lat=${location.latitude}, Lng=${location.longitude}")
+                    onNewLocation(location)
+                } else {
+                    Log.w(TAG, "Location result is null")
+                }
             }
         }
 
@@ -91,7 +83,6 @@ class LocationService : Service() {
 
         createLocationRequest()
         requestLocationUpdates()
-        Log.d(TAG, "LocationService created")
 
     }
 
@@ -113,32 +104,85 @@ class LocationService : Service() {
         }
     }
 
-    private fun onNewLocation(location: Location) {
-        if (!isTracking) return
+    private fun addCheckpoint() {
+        currentLocation?.let { location ->
+            val latLng = LatLng(location.latitude, location.longitude)
 
-        val currentTime = System.currentTimeMillis()
+            // Prepare checkpoint data
+            val currentTime = System.currentTimeMillis()
+
+            // Broadcast checkpoint info
+            val checkpointIntent = Intent(C.NOTIFICATION_ACTION_CP).apply {
+                putExtra("lat", latLng.latitude)
+                putExtra("lng", latLng.longitude)
+                putExtra("timestamp", currentTime)
+            }
+            LocalBroadcastManager.getInstance(this).sendBroadcast(checkpointIntent)
+
+            locationCP = location
+            distanceCPTotal = 0f
+        } ?: Log.e(TAG, "Current location is null. Cannot create checkpoint.")
+    }
+
+    private fun addWaypoint() {
+        currentLocation?.let { location ->
+            val latLng = LatLng(location.latitude, location.longitude)
+
+            // Broadcast waypoint info
+            val waypointIntent = Intent(C.NOTIFICATION_ACTION_WP).apply {
+                putExtra("lat", latLng.latitude)
+                putExtra("lng", latLng.longitude)
+            }
+            LocalBroadcastManager.getInstance(this).sendBroadcast(waypointIntent)
+
+            locationWP = location
+            distanceWPTotal = 0f
+        } ?: Log.e(TAG, "Current location is null. Cannot create waypoint.")
+    }
+
+
+    private fun onNewLocation(location: Location) {
+        Log.i(TAG, "New location: $location")
+        if (currentLocation == null){
+            locationStart = location
+            locationCP = location
+            locationWP = location
+        } else {
+            distanceOverallTotal += location.distanceTo(currentLocation!!)
+
+            distanceCPTotal += location.distanceTo(currentLocation!!)
+
+            distanceWPTotal += location.distanceTo(currentLocation!!)
+        }
 
         previousLocation?.let { prevLoc ->
             val prevLatLng = LatLng(prevLoc.latitude, prevLoc.longitude)
             val currLatLng = LatLng(location.latitude, location.longitude)
 
-            // Calculate distance and update totals
-            val distance = prevLoc.distanceTo(location)
-            totalDistance += distance
 
-            // Add polyline
-            polylines.add(prevLatLng to currLatLng)
+            // save the location for calculations
+            currentLocation = location
 
-            // Broadcast the new location update
+            showNotification()
+
+            // broadcast new location to UI
             val intent = Intent(C.LOCATION_UPDATE_ACTION).apply {
-                putExtra("totalDistance", totalDistance)
                 putExtra("newPolyline", Pair(prevLatLng, currLatLng))
             }
-            sendBroadcast(intent)
+            intent.putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, location.latitude)
+            intent.putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, location.longitude)
+            intent.putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, distanceOverallTotal)
+            intent.putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, distanceCPTotal)
+            intent.putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, distanceWPTotal)
+
+            Log.d(TAG, "Broadcasting LOCATION_UPDATE_ACTION: Lat=${location.latitude}, Lng=${location.longitude}")
+
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            Log.d(TAG, "Broadcast LOCATION_UPDATE_ACTION sent")
         }
 
         previousLocation = location
-        lastUpdateTime = currentTime
+
     }
 
     private fun createLocationRequest() {
@@ -171,23 +215,22 @@ class LocationService : Service() {
         Log.d(TAG, "onDestroy")
         super.onDestroy()
 
-        // Stop location updates
+        //stop location updates
         mLocationCallback?.let { mFusedLocationClient.removeLocationUpdates(it) }
 
-        // Remove notifications
-        NotificationManagerCompat.from(this).cancel(C.NOTIFICATION_ID)
+        // remove notifications
+        NotificationManagerCompat.from(this).cancelAll()
 
-        // Unregister broadcast receiver
+
+        // don't forget to unregister brodcast receiver!!!!
         unregisterReceiver(broadcastReceiver)
 
-        // Stop the foreground service
-        stopForeground(true)
 
-        // Broadcast stop to UI
+        // broadcast stop to UI
         val intent = Intent(C.LOCATION_UPDATE_ACTION)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-    }
 
+    }
 
     override fun onLowMemory() {
         Log.d(TAG, "onLowMemory")
@@ -199,13 +242,13 @@ class LocationService : Service() {
 
         // set counters and locations to 0/null
         currentLocation = null
-//        locationStart = null
-//        locationCP = null
-//        locationWP = null
-//
-//        distanceOverallTotal = 0f
-//        distanceCPTotal = 0f
-//        distanceWPTotal = 0f
+        locationStart = null
+        locationCP = null
+        locationWP = null
+
+        distanceOverallTotal = 0f
+        distanceCPTotal = 0f
+        distanceWPTotal = 0f
 
 
         showNotification()
@@ -230,14 +273,6 @@ class LocationService : Service() {
 
     }
 
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        Log.d(TAG, "onTaskRemoved")
-        super.onTaskRemoved(rootIntent)
-
-        // Stop the service
-        stopSelf()
-    }
-
     @SuppressLint("ForegroundServiceType")
     fun showNotification(){
         val intentCp = Intent(C.NOTIFICATION_ACTION_CP)
@@ -252,18 +287,16 @@ class LocationService : Service() {
 
         notifyview.setOnClickPendingIntent(R.id.imageButtonCP, pendingIntentCp)
         notifyview.setOnClickPendingIntent(R.id.imageButtonWP, pendingIntentWp)
-//        Log.d("NOTIF", "showNotification: overall distance $distanceOverallTotal, " +
-//                "cp distance $distanceCPTotal, wp distance $distanceWPTotal")
+
+
+//        notifyview.setTextViewText(R.id.textViewOverallDirect, "%.2f".format(distanceOverallDirect))
+//        notifyview.setTextViewText(R.id.textViewOverallTotal, "%.2f".format(distanceOverallTotal))
 //
+//        notifyview.setTextViewText(R.id.textViewWPDirect, "%.2f".format(distanceWPDirect))
+//        notifyview.setTextViewText(R.id.textViewWPTotal, "%.2f".format(distanceWPTotal))
 //
-//        notifyview.setTextViewText(R.id.overallDistance, "%.2f".format(distanceOverallTotal))
-//        notifyview.setTextViewText(R.id.overallPace, "%.2f".format(paceOverall))
-//
-//        notifyview.setTextViewText(R.id.WPdistance, "%.2f".format(distanceWPTotal))
-//        notifyview.setTextViewText(R.id.WPpace, "%.2f".format(paceWP))
-//
-//        notifyview.setTextViewText(R.id.CPdistance, "%.2f".format(distanceCPTotal))
-//        notifyview.setTextViewText(R.id.CPpace, "%.2f".format(paceCP))
+//        notifyview.setTextViewText(R.id.textViewCPDirect, "%.2f".format(distanceCPDirect))
+//        notifyview.setTextViewText(R.id.textViewCPTotal, "%.2f".format(distanceCPTotal))
 
         // construct and show notification
         var builder = NotificationCompat.Builder(applicationContext, C.NOTIFICATION_CHANNEL)
@@ -284,39 +317,12 @@ class LocationService : Service() {
     private inner class InnerBroadcastReceiver: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent!!.action?.let { Log.d(TAG, it) }
-            when (intent.action) {
-                C.ACTION_UPDATE_TRACKING -> {
-                    // Update the isTracking flag
-                    isTracking = intent.getBooleanExtra(C.EXTRA_IS_TRACKING, false)
-                    Log.d(TAG, "isTracking updated to: $isTracking")
-                }
-                C.LOCATION_UPDATE_ACTION -> {
-//                    // Update distances and paces from broadcast
-//                    distanceOverallTotal = intent.getFloatExtra("totalDistance", 0f)
-//                    distanceCPTotal = intent.getFloatExtra("checkpointDistance", 0f)
-//                    distanceWPTotal = intent.getFloatExtra("waypointDistance", 0f)
-//                    paceOverall = intent.getFloatExtra("totalPace", 0f)
-//                    paceCP = intent.getFloatExtra("checkpointPace", 0f)
-//                    paceWP = intent.getFloatExtra("waypointPace", 0f)
-//
-//                    // Refresh notification
-//                    showNotification()
-//                }
-//                C.NOTIFICATION_ACTION_WP -> {
-//                    locationWP = currentLocation
-//                    distanceWPTotal = 0f
-//                    showNotification()
-//                }
-//                C.NOTIFICATION_ACTION_CP -> {
-//                    locationCP = currentLocation
-//                    distanceCPTotal = 0f
-//                    showNotification()
-                }
+            when(intent!!.action){
+                C.NOTIFICATION_ACTION_WP -> addWaypoint()
+                C.NOTIFICATION_ACTION_CP -> addCheckpoint()
             }
         }
+
     }
-
-
-//    private fun LocationService.location() = locationCP
 
 }

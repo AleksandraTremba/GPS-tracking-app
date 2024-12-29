@@ -9,22 +9,19 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.location.Location
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
-import android.view.LayoutInflater
-import android.widget.Button
+import android.view.View
 import android.widget.ImageButton
-import android.widget.PopupWindow
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -36,21 +33,29 @@ import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
+import com.google.android.material.snackbar.Snackbar
+import com.taltech.ee.finalproject.C
+import com.taltech.ee.finalproject.LocationService
+import com.taltech.ee.finalproject.R
+
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
-
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
+
+    private val broadcastReceiver = InnerBroadcastReceiver()
+    private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
+
+
+    private var locationServiceActive = false
+
     // Google Maps variables
     private lateinit var mMap: GoogleMap
-    private lateinit var mFusedLocationClient: FusedLocationProviderClient
-    private var mLocationCallback: LocationCallback? = null
     private var mPolyline: Polyline? = null
     private val polylines = mutableListOf<Polyline>()
     private var isTracking = false
-    private var startLocation: Location? = null
 
     private var isCentered: Boolean = true
     private var isNorthUp: Boolean = true // Default to North-Up
@@ -61,7 +66,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var optionsButton: ImageButton
     private lateinit var orientationTextView: TextView
 
-    private var previousLocation: Location? = null
 
     // UI elements
     private lateinit var startStopButton: ImageButton
@@ -70,17 +74,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var timeElapsedCheckpoint: TextView
     private lateinit var timeElapsedWaypoint: TextView
 
+    // Recieved
+    private var currentLat = 0.0
+    private var currentLong = 0.0
+
 
     // Time tracking
     private var startTime: Long = 0
     private lateinit var elapsedTimeHandler: android.os.Handler
-
-    // Notification and Broadcast
-    private val broadcastReceiver = InnerBroadcastReceiver()
-    private val broadcastReceiverIntentFilter = IntentFilter().apply {
-        addAction(C.LOCATION_UPDATE_ACTION)
-    }
-    private var locationServiceActive = false
 
     private var totalDistance: Float = 0f
     private var totalPace = 0f
@@ -100,17 +101,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var waypointPace = 0f
 
 
-
+    // ============================================== MAIN ENTRY - ONCREATE =============================================
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
 
-        // Initialize elapsedTimeHandler here
-        elapsedTimeHandler = android.os.Handler(mainLooper)
-
-        // The rest of your onCreate logic
+        // safe to call every time
         createNotificationChannel()
 
+        if (!checkPermissions()) {
+            requestPermissions()
+        }
+
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
+
+        elapsedTimeHandler = android.os.Handler(mainLooper)
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
@@ -118,8 +125,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
         isCentered = sharedPreferences.getBoolean("isCentered", false)
         isSatelliteView = sharedPreferences.getBoolean("isSatelliteView", true)
-
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         startStopButton = findViewById(R.id.start_stop_button)
         timeElapsedTextView = findViewById(R.id.time_elapsed_start)
@@ -137,57 +142,182 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val checkpointButton = findViewById<ImageButton>(R.id.checkpoint_icon)
         checkpointButton.setOnClickListener {
             if (isTracking) {
-                enableCheckpointMode()
-            }
+                val intent = Intent(C.NOTIFICATION_ACTION_CP)
+                sendBroadcast(intent)            }
         }
         val waypointButton = findViewById<ImageButton>(R.id.waypoint_icon)
         waypointButton.setOnClickListener {
             if (isTracking) {
-                addWaypoint()
-            }
+                val intent = Intent(C.NOTIFICATION_ACTION_WP)
+                sendBroadcast(intent)            }
         }
-
-//        mLocationCallback = object : LocationCallback() {
-//            override fun onLocationResult(locationResult: LocationResult) {
-//                super.onLocationResult(locationResult)
-//                locationResult.lastLocation?.let {
-//                    Log.d(TAG, "Location update: $it")
-////                    onNewLocation(it)
-//                }
-//            }
-//        }
-
-        if (!checkPermissions()) {
-            requestPermissions()
-        }
-
         optionsButton = findViewById(R.id.options_button)
         optionsButton.setOnClickListener {
             val dialogFragment = OptionsDialogFragment()
             dialogFragment.show(supportFragmentManager, "options_dialog")
         }
 
-        orientationTextView = findViewById(R.id.orientation)
-
-        // Load preferences
         val isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
 
-        // Set initial text based on preferences
+        orientationTextView = findViewById(R.id.orientation)
         orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
-        startLocationService()
 
         val intentFilter = IntentFilter().apply {
             addAction(C.LOCATION_UPDATE_ACTION)
             addAction(C.ACTION_UPDATE_TRACKING)
         }
         registerReceiver(broadcastReceiver, intentFilter)
+
+    }
+
+    // ============================================== MAP =============================================
+
+
+    // ============================================== LIFECYCLE CALLBACKS =============================================
+    override fun onStart() {
+        Log.d(TAG, "onStart")
+
+        super.onStart()
+    }
+
+    override fun onResume() {
+        Log.d(TAG, "onResume")
+        super.onResume()
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
+
+    }
+
+    override fun onPause() {
+        Log.d(TAG, "onPause")
+        super.onPause()
     }
 
     override fun onStop() {
+        Log.d(TAG, "onStop")
         super.onStop()
-        unregisterReceiver(broadcastReceiver) // Always unregister when the activity stops
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
     }
 
+    override fun onDestroy() {
+        Log.d(TAG, "onDestroy")
+        super.onDestroy()
+    }
+
+    override fun onRestart() {
+        Log.d(TAG, "onRestart")
+        super.onRestart()
+    }
+
+    // ============================================== NOTIFICATION CHANNEL CREATION =============================================
+    private fun createNotificationChannel() {
+        // when on 8 Oreo or higher
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                C.NOTIFICATION_CHANNEL,
+                "Default channel",
+                NotificationManager.IMPORTANCE_LOW
+            );
+
+            //.setShowBadge(false).setSound(null, null);
+
+            channel.description = "Default channel"
+
+            val notificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+
+    // ============================================== PERMISSION HANDLING =============================================
+    // Returns the current state of the permissions needed.
+    private fun checkPermissions(): Boolean {
+        return PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    }
+
+    private fun requestPermissions() {
+        val shouldProvideRationale =
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        // Provide an additional rationale to the user. This would happen if the user denied the
+        // request previously, but didn't check the "Don't ask again" checkbox.
+        if (shouldProvideRationale) {
+            Log.i(
+                TAG,
+                "Displaying permission rationale to provide additional context."
+            )
+            Snackbar.make(
+                findViewById(R.id.map),
+                "Hey, i really need to access GPS!",
+                Snackbar.LENGTH_INDEFINITE
+            )
+                .setAction("OK", View.OnClickListener {
+                    // Request permission
+                    ActivityCompat.requestPermissions(
+                        this,
+                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                        C.REQUEST_PERMISSIONS_REQUEST_CODE
+                    )
+                })
+                .show()
+        } else {
+            Log.i(TAG, "Requesting permission")
+            // Request permission. It's possible this can be auto answered if device policy
+            // sets the permission in a given state or the user denied the permission
+            // previously and checked "Never ask again".
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                C.REQUEST_PERMISSIONS_REQUEST_CODE
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        Log.i(TAG, "onRequestPermissionResult")
+        if (requestCode === C.REQUEST_PERMISSIONS_REQUEST_CODE) {
+            if (grantResults.count() <= 0) { // If user interaction was interrupted, the permission request is cancelled and you
+                // receive empty arrays.
+                Log.i(TAG, "User interaction was cancelled.")
+                Toast.makeText(this, "User interaction was cancelled.", Toast.LENGTH_SHORT).show()
+            } else if (grantResults[0] === PackageManager.PERMISSION_GRANTED) {// Permission was granted.
+                Log.i(TAG, "Permission was granted")
+                Toast.makeText(this, "Permission was granted", Toast.LENGTH_SHORT).show()
+            } else { // Permission denied.
+                Snackbar.make(
+                    findViewById(R.id.map),
+                    "You denied GPS! What can I do?",
+                    Snackbar.LENGTH_INDEFINITE
+                )
+                    .setAction("Settings", View.OnClickListener {
+                        // Build intent that displays the App settings screen.
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        val uri: Uri = Uri.fromParts("package", applicationContext.packageName, null)
+                        intent.data = uri
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        startActivity(intent)
+                    })
+                    .show()
+            }
+        }
+
+    }
+
+
+
+    // ============================================== HANDLERS =============================================
     private fun alertStopSession() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("End the session")
@@ -201,99 +331,33 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         builder.show()
     }
 
-    private fun showPopupWindow() {
-        val inflater = LayoutInflater.from(this)
-        val popupView = inflater.inflate(R.layout.popup_window, null)
+    private fun handleCheckpoint(lat: Double, lng: Double, timestamp: Long) {
+        val latLng = LatLng(lat, lng)
+        val checkpointMarkerOptions = MarkerOptions()
+            .position(latLng)
+            .title("Checkpoint")
+            .snippet("Lat: $lat, Lng: $lng")
+        val checkpointMarker = mMap.addMarker(checkpointMarkerOptions)
 
-        val popupWindow = PopupWindow(
-            popupView,
-            ConstraintLayout.LayoutParams.WRAP_CONTENT,
-            ConstraintLayout.LayoutParams.WRAP_CONTENT,
-            true
-        )
-
-        val noButton = popupView.findViewById<Button>(R.id.no_button)
-        val yesButton = popupView.findViewById<Button>(R.id.yes_button)
-
-        noButton.setOnClickListener {
-            popupWindow.dismiss()
+        checkpointMarker?.let {
+            checkpointMarkers.add(Pair(it, timestamp))
         }
 
-        yesButton.setOnClickListener {
-            stopTracking()
-            popupWindow.dismiss()
-        }
-
-        popupWindow.showAtLocation(
-            findViewById(R.id.map),  // root layout to anchor the popup
-            android.view.Gravity.CENTER,  // Center the popup
-            0, 0  // offset position (0, 0 means centered)
-        )
+        lastCheckpoint = checkpointMarkerOptions
+        lastCheckpointTime = timestamp
+        Log.d("DB", "Checkpoint added: $latLng at $timestamp")
     }
 
-    private fun enableCheckpointMode() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions()
-            return
-        }
-
-        mFusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            if (location != null) {
-                val latLng = LatLng(location.latitude, location.longitude)
-
-                val checkpointMarkerOptions = MarkerOptions()
-                    .position(latLng)
-                    .title("Checkpoint")
-                    .snippet("Lat: ${latLng.latitude}, Lng: ${latLng.longitude}")
-                val currentTime = System.currentTimeMillis()
-                var checkpointMarker = mMap.addMarker(checkpointMarkerOptions)
-
-                checkpointMarker?.let {
-                    checkpointMarkers.add(Pair(it, currentTime))
-                }
-                Log.d("DB", "checkpoint markers: $checkpointMarkers")
-
-                lastCheckpoint = checkpointMarkerOptions
-                lastCheckpointTime = currentTime
-
-                Toast.makeText(this, "Checkpoint added.", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Unable to fetch current location.", Toast.LENGTH_SHORT).show()
-            }
-        }.addOnFailureListener {
-            Toast.makeText(this, "Failed to get location: ${it.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun addWaypoint() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions()
-            return
-        }
-
-        mFusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            if (location != null) {
-                val latLng = LatLng(location.latitude, location.longitude)
-                currentWaypointMarker?.remove()
-
-                // Add a new waypoint marker at the current location
-                currentWaypointMarker = mMap.addMarker(
-                    MarkerOptions()
-                        .position(latLng)
-                        .title("Waypoint")
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
-                )
-
-                val currentTime = System.currentTimeMillis()
-                lastWaypointTime = currentTime
-
-                Toast.makeText(this, "Waypoint added at your current location.", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Unable to fetch current location.", Toast.LENGTH_SHORT).show()
-            }
-        }.addOnFailureListener {
-            Toast.makeText(this, "Failed to get location: ${it.message}", Toast.LENGTH_SHORT).show()
-        }
+    private fun handleWaypoint(lat: Double, lng: Double) {
+        val latLng = LatLng(lat, lng)
+        currentWaypointMarker?.remove()
+        currentWaypointMarker = mMap.addMarker(
+            MarkerOptions()
+                .position(latLng)
+                .title("Waypoint")
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+        )
+        Log.d("DB", "Waypoint added: $latLng")
     }
 
 
@@ -340,17 +404,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-
-
-    fun toggleMapCentering(isCentered: Boolean) {
-        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putBoolean("isCentered", isCentered).apply()
-
-        if (isCentered) {
-            centerMapOnCurrentLocation()
-        }
-    }
-
     fun toggleSatelliteView(isSatelliteView: Boolean) {
         val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
         sharedPreferences.edit().putBoolean("isSatelliteView", isSatelliteView).apply()
@@ -370,161 +423,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+
+
+    fun toggleMapCentering(isCentered: Boolean) {
+        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        sharedPreferences.edit().putBoolean("isCentered", isCentered).apply()
+
+        if (isCentered) {
+            centerMapOnCurrentLocation()
+        }
+    }
+
     private fun centerMapOnCurrentLocation() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return
-        }
-        mFusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            location?.let {
-                val latLng = LatLng(it.latitude, it.longitude)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
-            }
+        if (currentLat != 0.0 && currentLong != 0.0) {
+            val latLng = LatLng(currentLat, currentLong)
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+        } else {
+            // Handle the case where currentLat and currentLong are not set
+            Toast.makeText(this, "Current location not available", Toast.LENGTH_SHORT).show()
         }
     }
-
-    private fun simulateMovement() {
-        val startLocation = previousLocation ?: Location("").apply {
-            latitude = 59.39487859716227
-            longitude = 24.67152136890696
-        }
-
-        val newLocation = Location("").apply {
-            val randomDirection = Math.random() * 2 * Math.PI // Random direction in radians
-            val distance = 100.0 / 6371000.0 // 100 meters in radians (Earth radius = 6371 km)
-
-            latitude = startLocation.latitude + Math.toDegrees(distance * Math.cos(randomDirection))
-            longitude = startLocation.longitude + Math.toDegrees(distance * Math.sin(randomDirection) / Math.cos(Math.toRadians(startLocation.latitude)))
-        }
-
-        // Pass this new location to your `onNewLocation` function
-//        onNewLocation(newLocation)
-
-        // Schedule the next update in 2 seconds
-        elapsedTimeHandler.postDelayed({ simulateMovement() }, 2000)
-    }
-
-
-//    private fun onNewLocation(location: Location) {
-//        if (!isTracking) {
-//            return // Don't calculate distance or update data if tracking is not active
-//        }
-//
-//        // Convert the location to LatLng
-//        val latLng = LatLng(location.latitude, location.longitude)
-//
-//        // If we have a previous location, draw a polyline
-//        previousLocation?.let {
-//            val previousLatLng = LatLng(it.latitude, it.longitude)
-//
-//            // Create a polyline from previous location to the new one
-//            val polyline = mMap.addPolyline(PolylineOptions().add(previousLatLng, latLng).color(android.graphics.Color.BLUE).width(5f))
-//            polylines.add(polyline)
-//            track.add("${location.latitude},${location.longitude},${it.latitude},${it.longitude}")
-//        }
-//
-//        val currentTime = System.currentTimeMillis()
-//
-//        // Calculate distance if there is a previous location
-//        previousLocation?.let {
-//            val distance = it.distanceTo(location) // Distance in meters
-//            totalDistance += distance // Add to total distance
-//
-//            // Calculate elapsed time since last update
-//            val elapsedTime = (currentTime - lastUpdateTime) / 1000f // in seconds
-//
-//            // Calculate pace (time per kilometer)
-//            if (totalDistance > 0) {
-//                val pace = if (elapsedTime > 0) (elapsedTime / (distance / 1000)) else 0f // seconds/km
-//                totalPace = pace
-//                updatePaceTextView(pace)
-//            }
-//
-//            // Calculate distances for Checkpoint and Waypoint only if they exist
-//
-//            // Checkpoint
-//            var positionToCheckpoint = lastCheckpoint?.position
-//            val locationToCheckpoint = positionToCheckpoint?.let {
-//                Location("").apply {
-//                    latitude = it.latitude
-//                    longitude = it.longitude
-//                }
-//            }
-//
-//            var distanceToCheckpoint = locationToCheckpoint?.let { it1 -> it.distanceTo(it1) }
-//            if (distanceToCheckpoint != null) {
-//                checkpointDistance += distanceToCheckpoint
-//            }
-//
-//            val elapsedTimeCheckpoint = (currentTime - lastCheckpointTime) / 1000f // in seconds
-//
-//            if (distanceToCheckpoint != null && distanceToCheckpoint > 0) {
-//                val pace = if (elapsedTimeCheckpoint > 0) (elapsedTimeCheckpoint / (distanceToCheckpoint / 1000)) else 0f // seconds/km
-//                checkpointPace = pace
-//                updateCheckpointPaceTextView(pace)
-//            }
-//
-//            // Waypoint
-//            var positionToWaypoint = currentWaypointMarker?.position
-//            val locationToWaypoint = positionToWaypoint?.let {
-//                Location("").apply {
-//                    latitude = it.latitude
-//                    longitude = it.longitude
-//                }
-//            }
-//
-//            var distanceToWaypoint = locationToWaypoint?.let { it1 -> it.distanceTo(it1) }
-//            if (distanceToWaypoint != null) {
-//                waypointDistance += distanceToWaypoint
-//            }
-//            val elapsedTimeWaypoint = (currentTime - lastWaypointTime) / 1000f // in seconds
-//
-//            if (distanceToWaypoint != null && distanceToWaypoint > 0) {
-//                val pace = if (elapsedTimeWaypoint > 0) (elapsedTimeWaypoint / (distanceToWaypoint / 1000)) else 0f // seconds/km
-//                waypointPace = pace
-//                updateWaypointPaceTextView(pace)
-//            }
-//
-//        }
-//
-//        lastUpdateTime = currentTime
-//        previousLocation = location
-//
-//        updateDistanceTextView()
-//        updateCheckpointDistanceTextView()
-//        updateWaypointDistanceTextView()
-//        broadcastLocationUpdates()
-//
-//        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
-//    }
-//
-//    private fun broadcastLocationUpdates() {
-//        val intent = Intent(C.LOCATION_UPDATE_ACTION)
-//        intent.putExtra("totalDistance", totalDistance)
-//        intent.putExtra("checkpointDistance", checkpointDistance)
-//        intent.putExtra("waypointDistance", waypointDistance)
-//        intent.putExtra("totalPace", totalPace)
-//        intent.putExtra("checkpointPace", checkpointPace)
-//        intent.putExtra("waypointPace", waypointPace)
-//        Log.d("NOTIF", "sent: overall distance $totalDistance, " +
-//                "cp distance $checkpointDistance, wp distance $waypointPace")
-//        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-//    }
-
-
 
     private fun updateDistanceTextView() {
         val distanceTextView = findViewById<TextView>(R.id.distance_start)
@@ -568,8 +486,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
     }
 
-
-
     private fun updateTrackingState(isTracking: Boolean) {
         val intent = Intent(C.ACTION_UPDATE_TRACKING).apply {
             putExtra(C.EXTRA_IS_TRACKING, isTracking)
@@ -577,28 +493,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
-
-
     private fun startTracking() {
         isTracking = true
         updateTrackingState(isTracking)
+        startstopLocationService()
         startStopButton.setImageResource(R.drawable.pause)
 
         startTime = System.currentTimeMillis()
         elapsedTimeHandler.postDelayed(updateElapsedTimeRunnable, 1000)
-//        startLocationUpdates()
-
-
-//        simulateMovement()
     }
 
 
     private fun stopTracking() {
         isTracking = false
         updateTrackingState(isTracking)
+        startstopLocationService()
         startStopButton.setImageResource(R.drawable.play)
         elapsedTimeHandler.removeCallbacks(updateElapsedTimeRunnable)
-        mFusedLocationClient.removeLocationUpdates(mLocationCallback!!) // Stop location updates
 
         saveSessionData()
 
@@ -621,7 +532,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Reset the tracking data
         totalDistance = 0f
         lastUpdateTime = 0
-        previousLocation = null
         mPolyline = null
         lastCheckpoint = null
         lastCheckpointTime = 0L
@@ -663,8 +573,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         Toast.makeText(this, "Session and checkpoints saved.", Toast.LENGTH_SHORT).show()
     }
 
-
-
     private val updateElapsedTimeRunnable = object : Runnable {
         override fun run() {
             if (isTracking) {
@@ -704,83 +612,53 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun startLocationService() {
-        createNotificationChannel()
 
-        val serviceIntent = Intent(this, LocationService::class.java)
+    fun startstopLocationService() {
+        Log.d(TAG, "StartedLocationService. locationServiceActive: $locationServiceActive")
+        // try to start/stop the background service
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d("MainActivity", "Starting LocationService with startForegroundService")
-            startForegroundService(serviceIntent)
+        if (locationServiceActive) {
+            // stopping the service
+            stopService(Intent(this, LocationService::class.java))
+
         } else {
-            Log.d("MainActivity", "Starting LocationService with startService")
-            startService(serviceIntent)
+            if (Build.VERSION.SDK_INT >= 26) {
+                // starting the FOREGROUND service
+                // service has to display non-dismissable notification within 5 secs
+                startForegroundService(Intent(this, LocationService::class.java))
+            } else {
+                startService(Intent(this, LocationService::class.java))
+            }
         }
+
+        locationServiceActive = !locationServiceActive
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                C.NOTIFICATION_CHANNEL,
-                "Location Updates",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            channel.description = "Displays location updates in the background"
-
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager?.createNotificationChannel(channel)
-        }
+    fun buttonWPOnClick(view: View) {
+        Log.d(TAG, "buttonWPOnClick")
+        sendBroadcast(Intent(C.NOTIFICATION_ACTION_WP))
     }
 
-
-    private fun checkPermissions(): Boolean {
-        return ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    fun buttonCPOnClick(view: View) {
+        Log.d(TAG, "buttonCPOnClick")
+        sendBroadcast(Intent(C.NOTIFICATION_ACTION_CP))
     }
 
-    private fun requestPermissions() {
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-            C.REQUEST_PERMISSIONS_REQUEST_CODE
-        )
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == C.REQUEST_PERMISSIONS_REQUEST_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//            startLocationUpdates()
-        } else {
-            Toast.makeText(this, "Permission Denied!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-//    private fun startLocationUpdates() {
-//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//            return
-//        }
-//        mFusedLocationClient.requestLocationUpdates(
-//            LocationRequest.create().apply {
-//                interval = 2000 // Update every 2 seconds
-//                fastestInterval = 1000 // Fastest update every 1 second
-//                priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-//            },
-//            mLocationCallback!!,
-//            mainLooper
-//        )
-//    }
-
-    private inner class InnerBroadcastReceiver : BroadcastReceiver() {
+    // ============================================== BROADCAST RECEIVER =============================================
+    private inner class InnerBroadcastReceiver: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
+            intent!!.action?.let { Log.d(TAG, it) }
+            when (intent!!.action){
                 C.LOCATION_UPDATE_ACTION -> {
-                    Log.d(TAG, "LOCATION UPDATED!!!!!!!")
-                    totalDistance = intent.getFloatExtra("totalDistance", 0f)
-                    val newPolyline =
-                        intent.getSerializableExtra("newPolyline") as? Pair<LatLng, LatLng>
+                    Log.d(TAG, "LOCATION UPDATE!")
+                    currentLat = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, 0.0)
+                    currentLong = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, 0.0)
+                    totalDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, 0f)
+                    checkpointDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, 0f)
+                    waypointDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, 0f)
+                    val newPolyline = intent.getSerializableExtra("newPolyline") as? Pair<LatLng, LatLng>
 
-                    // Update UI
-                    updateDistanceTextView()
-
+                    Log.d(TAG, "Received location update: TOTALDISTANCE=$totalDistance, CHECKPOINT=$checkpointDistance")
                     // Draw new polyline on the map
                     newPolyline?.let { (start, end) ->
                         val polyline = mMap.addPolyline(
@@ -789,10 +667,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         polylines.add(polyline)
                     }
                 }
+                C.NOTIFICATION_ACTION_CP -> {
+                    val lat = intent.getDoubleExtra("lat", 0.0)
+                    val lng = intent.getDoubleExtra("lng", 0.0)
+                    val timestamp = intent.getLongExtra("timestamp", 0L)
 
-                C.ACTION_UPDATE_TRACKING -> {
-                    isTracking = intent.getBooleanExtra(C.EXTRA_IS_TRACKING, false)
-                    Log.d(TAG, "Tracking state updated: $isTracking")
+                    // Handle checkpoint data
+                    handleCheckpoint(lat, lng, timestamp)
+                }
+                C.NOTIFICATION_ACTION_WP -> {
+                    val lat = intent.getDoubleExtra("lat", 0.0)
+                    val lng = intent.getDoubleExtra("lng", 0.0)
+
+                    // Handle waypoint data
+                    handleWaypoint(lat, lng)
                 }
             }
         }

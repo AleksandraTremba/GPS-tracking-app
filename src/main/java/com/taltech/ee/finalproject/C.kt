@@ -12,8 +12,13 @@ class C {
 
         val LOCATION_UPDATE_ACTION_LATITUDE = "com.taltech.ee.finalproject.location_update.latitude"
         val LOCATION_UPDATE_ACTION_LONGITUDE = "com.taltech.ee.finalproject.location_update.longitude"
+        const val LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL = "com.taltech.ee.finalproject.location_update.distanceOverallTotal"
+        const val LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL = "com.taltech.ee.finalproject.location_update.distanceCPTotal"
+        const val LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL = "com.taltech.ee.finalproject.location_update.distanceWPTotal"
+        const val LOCATION_UPDATE_ACTION_POLYLINE = "com.taltech.ee.finalproject.location_update.polyline"
 
         val NOTIFICATION_ID = 4321
         val REQUEST_PERMISSIONS_REQUEST_CODE = 34;
+
     }
 }
