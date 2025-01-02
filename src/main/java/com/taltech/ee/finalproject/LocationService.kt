@@ -40,28 +40,43 @@ class LocationService : Service() {
     private var currentLocation: Location? = null
 
     private var distanceOverallTotal = 0f
+    private var paceOverall = 0.0
     private var locationStart: Location? = null
 
     private var distanceCPTotal = 0f
+    private var paceCP = 0.0
     private var locationCP: Location? = null
 
     private var distanceWPTotal = 0f
+    private var paceWP = 0.0
     private var locationWP: Location? = null
 
     private var previousLocation: Location? = null
+    private var startTime = 0L
+    private var isTracking = false
+
+    private var lastCheckpointTime = 0L
+    private var lastWaypointTime = 0L
+    private var checkpoint = false
+    private var waypoint = false
 
 
 
     override fun onCreate() {
         Log.d(TAG, "onCreate")
         super.onCreate()
+        Log.d("pace", "started service!")
 
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
         broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
-
+        broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_OVERALL)
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_CP)
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_WP)
 
         registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
+        Log.d("pace", "registered broadcast")
 
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -107,9 +122,11 @@ class LocationService : Service() {
     private fun addCheckpoint() {
         currentLocation?.let { location ->
             val latLng = LatLng(location.latitude, location.longitude)
+            checkpoint = true
 
             // Prepare checkpoint data
             val currentTime = System.currentTimeMillis()
+            lastCheckpointTime = currentTime
 
             // Broadcast checkpoint info
             val checkpointIntent = Intent(C.NOTIFICATION_ACTION_CP).apply {
@@ -118,6 +135,7 @@ class LocationService : Service() {
                 putExtra("timestamp", currentTime)
             }
             LocalBroadcastManager.getInstance(this).sendBroadcast(checkpointIntent)
+            Log.d("PRC", "SERVICE: checkpoint added, current time: $lastCheckpointTime")
 
             locationCP = location
             distanceCPTotal = 0f
@@ -127,13 +145,19 @@ class LocationService : Service() {
     private fun addWaypoint() {
         currentLocation?.let { location ->
             val latLng = LatLng(location.latitude, location.longitude)
+            waypoint = true
+
+            val currentTime = System.currentTimeMillis()
+            lastWaypointTime = currentTime
 
             // Broadcast waypoint info
             val waypointIntent = Intent(C.NOTIFICATION_ACTION_WP).apply {
                 putExtra("lat", latLng.latitude)
                 putExtra("lng", latLng.longitude)
+                putExtra("timestamp", currentTime)
             }
             LocalBroadcastManager.getInstance(this).sendBroadcast(waypointIntent)
+            Log.d("PRC", "SERVICE: waypoint added, current time: $lastCheckpointTime")
 
             locationWP = location
             distanceWPTotal = 0f
@@ -149,10 +173,24 @@ class LocationService : Service() {
             locationWP = location
         } else {
             distanceOverallTotal += location.distanceTo(currentLocation!!)
+            paceOverall = countPace(distanceOverallTotal, startTime)
+            Log.d("PRC", "SERVICE: overall distance: $distanceOverallTotal")
+            Log.d("PRC", "SERVICE: overall pace: $paceOverall")
 
-            distanceCPTotal += location.distanceTo(currentLocation!!)
 
-            distanceWPTotal += location.distanceTo(currentLocation!!)
+            if (checkpoint) {
+                distanceCPTotal += location.distanceTo(currentLocation!!)
+                paceCP = countPace(distanceCPTotal, lastCheckpointTime)
+                Log.d("PRC", "SERVICE: CP distance: $distanceCPTotal")
+                Log.d("PRC", "SERVICE: CP pace: $paceCP")
+            }
+
+            if (waypoint) {
+                distanceWPTotal += location.distanceTo(currentLocation!!)
+                paceWP = countPace(distanceWPTotal, lastWaypointTime)
+                Log.d("PRC", "SERVICE: WP distance: $distanceWPTotal")
+                Log.d("PRC", "SERVICE: WP pace: $paceWP")
+            }
         }
 
         previousLocation?.let { prevLoc ->
@@ -167,22 +205,39 @@ class LocationService : Service() {
 
             // broadcast new location to UI
             val intent = Intent(C.LOCATION_UPDATE_ACTION).apply {
-                putExtra("newPolyline", Pair(prevLatLng, currLatLng))
+                putExtra("newPolyline", Pair(
+                    LatLng(previousLocation?.latitude ?: 0.0, previousLocation?.longitude ?: 0.0),
+                    LatLng(location.latitude, location.longitude)
+                ))
+                putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, location.latitude)
+                putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, location.longitude)
+                putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, distanceOverallTotal)
+                putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, distanceCPTotal)
+                putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, distanceWPTotal)
+                putExtra(C.LOCATION_UPDATE_ACTION_PACE_OVERALL, paceOverall)
+                putExtra(C.LOCATION_UPDATE_ACTION_PACE_CP, paceCP)
+                putExtra(C.LOCATION_UPDATE_ACTION_PACE_WP, paceWP)
             }
-            intent.putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, location.latitude)
-            intent.putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, location.longitude)
-            intent.putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, distanceOverallTotal)
-            intent.putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, distanceCPTotal)
-            intent.putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, distanceWPTotal)
-
-            Log.d(TAG, "Broadcasting LOCATION_UPDATE_ACTION: Lat=${location.latitude}, Lng=${location.longitude}")
 
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            Log.d("PRC", "SERVICE: broadcast on new location sent to main")
             Log.d(TAG, "Broadcast LOCATION_UPDATE_ACTION sent")
         }
 
         previousLocation = location
 
+    }
+
+    private fun countPace(countDistance: Float, timestamp: Long): Double {
+        val distance = countDistance / 1000.0
+        Log.d("pace", "distance: $distance, start time: $startTime")
+        val paceInSeconds = if (countDistance > 0) {
+            val elapsedMillis = System.currentTimeMillis() - timestamp
+            (elapsedMillis / 1000.0) / distance
+        } else {
+            0.0
+        }
+        return paceInSeconds
     }
 
     private fun createLocationRequest() {
@@ -288,22 +343,39 @@ class LocationService : Service() {
         notifyview.setOnClickPendingIntent(R.id.imageButtonCP, pendingIntentCp)
         notifyview.setOnClickPendingIntent(R.id.imageButtonWP, pendingIntentWp)
 
+        val overallMinutes = (paceOverall / 60).toInt()
+        val overallSeconds = (paceOverall % 60).toInt()
 
-//        notifyview.setTextViewText(R.id.textViewOverallDirect, "%.2f".format(distanceOverallDirect))
-//        notifyview.setTextViewText(R.id.textViewOverallTotal, "%.2f".format(distanceOverallTotal))
-//
-//        notifyview.setTextViewText(R.id.textViewWPDirect, "%.2f".format(distanceWPDirect))
-//        notifyview.setTextViewText(R.id.textViewWPTotal, "%.2f".format(distanceWPTotal))
-//
-//        notifyview.setTextViewText(R.id.textViewCPDirect, "%.2f".format(distanceCPDirect))
-//        notifyview.setTextViewText(R.id.textViewCPTotal, "%.2f".format(distanceCPTotal))
+        val CPminutes = (paceCP / 60).toInt()
+        val CPseconds = (paceCP % 60).toInt()
+
+        val WPminutes = (paceWP / 60).toInt()
+        val WPseconds = (paceWP % 60).toInt()
+
+        Log.d("PRC", "SERVICE: notification distance: $distanceOverallTotal")
+
+        notifyview.setTextViewText(R.id.overallDistance, "%.2f".format(distanceOverallTotal / 1000))
+        notifyview.setTextViewText(R.id.overallPace, "%d:%02d".format(overallMinutes, overallSeconds))
+
+        if (distanceCPTotal > 0) {
+            Log.d("PRC", "SERVICE: CP distance: $distanceCPTotal")
+            notifyview.setTextViewText(R.id.CPdistance, "%.2f".format(distanceCPTotal / 1000))
+            notifyview.setTextViewText(R.id.CPpace, "%d:%02d".format(CPminutes, CPseconds))
+        }
+
+        if (distanceWPTotal > 0) {
+            Log.d("PRC", "SERVICE: WP distance: $distanceWPTotal")
+            notifyview.setTextViewText(R.id.WPdistance, "%.2f".format(distanceCPTotal / 1000))
+            notifyview.setTextViewText(R.id.WPpace, "%d:%02d".format(WPminutes, WPseconds))
+        }
 
         // construct and show notification
-        var builder = NotificationCompat.Builder(applicationContext, C.NOTIFICATION_CHANNEL)
+        val builder = NotificationCompat.Builder(applicationContext, C.NOTIFICATION_CHANNEL)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContent(notifyview)
 
         builder.setContent(notifyview)
 
@@ -313,13 +385,32 @@ class LocationService : Service() {
 
     }
 
+    private fun startTracking() {
+        isTracking = true
+    }
+
+    private fun stopTracking() {
+        isTracking = false
+    }
+
 
     private inner class InnerBroadcastReceiver: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent!!.action?.let { Log.d(TAG, it) }
             when(intent!!.action){
                 C.NOTIFICATION_ACTION_WP -> addWaypoint()
-                C.NOTIFICATION_ACTION_CP -> addCheckpoint()
+                C.NOTIFICATION_ACTION_CP -> {
+                    addCheckpoint()
+                }
+                C.ACTION_UPDATE_TRACKING -> {
+                    isTracking = intent.getBooleanExtra(C.EXTRA_IS_TRACKING, false)
+                    startTime = intent.getLongExtra("startTime", startTime)
+                    if (isTracking) {
+                        startTracking()
+                    } else {
+                        stopTracking()
+                    }
+                } else -> Log.d("pace", "Unknown action: ${intent.action}")
             }
         }
 

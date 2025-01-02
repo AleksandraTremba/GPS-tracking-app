@@ -38,7 +38,7 @@ class SavedSessionsActivity : AppCompatActivity() {
 
             val displayName = if (name != "Session") name else "Session $sessionId"
 
-            sessionList.add("$displayName \n\nDistance: ${"%.2f".format(distance)} km | Time: ${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace")
+            sessionList.add("$displayName \n\nDistance: ${"%.2f".format(distance)} km | Time: ${"%02d:%02d:%02d".format(hours, minutes, seconds)} | Pace: $pace\n")
             sessionIdList.add(sessionId)
         }
 

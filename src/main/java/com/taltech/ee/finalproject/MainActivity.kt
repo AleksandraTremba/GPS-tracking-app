@@ -1,6 +1,7 @@
 package com.taltech.ee.finalproject
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
@@ -84,7 +85,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var elapsedTimeHandler: android.os.Handler
 
     private var totalDistance: Float = 0f
-    private var totalPace = 0f
+    private var totalPace = 0.0
     private var lastUpdateTime: Long = 0
 
     private val checkpointMarkers: MutableList<Pair<Marker, Long>> = mutableListOf()
@@ -95,10 +96,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var lastWaypointTime: Long = 0
 
     private var checkpointDistance: Float = 0f
-    private var checkpointPace = 0f
+    private var checkpointPace = 0.0
 
     private var waypointDistance: Float = 0f
-    private var waypointPace = 0f
+    private var waypointPace = 0.0
+
+    private var elapsedTime = 0
 
 
     // ============================================== MAIN ENTRY - ONCREATE =============================================
@@ -116,6 +119,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
+        broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
+        broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
+        broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_OVERALL)
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_CP)
+        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_WP)
 
         elapsedTimeHandler = android.os.Handler(mainLooper)
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -143,13 +152,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         checkpointButton.setOnClickListener {
             if (isTracking) {
                 val intent = Intent(C.NOTIFICATION_ACTION_CP)
-                sendBroadcast(intent)            }
+                sendBroadcast(intent)
+                Log.d("PRC", "MAIN: checkpoint sent broadcast")
+            }
         }
         val waypointButton = findViewById<ImageButton>(R.id.waypoint_icon)
         waypointButton.setOnClickListener {
             if (isTracking) {
                 val intent = Intent(C.NOTIFICATION_ACTION_WP)
-                sendBroadcast(intent)            }
+                sendBroadcast(intent)
+                Log.d("PRC", "MAIN: waypoint sent broadcast")
+            }
         }
         optionsButton = findViewById(R.id.options_button)
         optionsButton.setOnClickListener {
@@ -162,11 +175,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         orientationTextView = findViewById(R.id.orientation)
         orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
 
-        val intentFilter = IntentFilter().apply {
-            addAction(C.LOCATION_UPDATE_ACTION)
-            addAction(C.ACTION_UPDATE_TRACKING)
-        }
-        registerReceiver(broadcastReceiver, intentFilter)
+//        val intentFilter = IntentFilter().apply {
+//            addAction(C.LOCATION_UPDATE_ACTION)
+//            addAction(C.ACTION_UPDATE_TRACKING)
+//        }
+//        registerReceiver(broadcastReceiver, intentFilter)
 
     }
 
@@ -197,7 +210,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         Log.d(TAG, "onStop")
         super.onStop()
 
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
     }
 
     override fun onDestroy() {
@@ -217,12 +229,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val channel = NotificationChannel(
                 C.NOTIFICATION_CHANNEL,
                 "Default channel",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_HIGH
             );
 
-            //.setShowBadge(false).setSound(null, null);
 
             channel.description = "Default channel"
+            channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
 
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -348,7 +360,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         Log.d("DB", "Checkpoint added: $latLng at $timestamp")
     }
 
-    private fun handleWaypoint(lat: Double, lng: Double) {
+    private fun handleWaypoint(lat: Double, lng: Double, timestamp: Long) {
         val latLng = LatLng(lat, lng)
         currentWaypointMarker?.remove()
         currentWaypointMarker = mMap.addMarker(
@@ -357,6 +369,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 .title("Waypoint")
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
         )
+        lastWaypointTime = timestamp
         Log.d("DB", "Waypoint added: $latLng")
     }
 
@@ -424,7 +437,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 
-
     fun toggleMapCentering(isCentered: Boolean) {
         val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
         sharedPreferences.edit().putBoolean("isCentered", isCentered).apply()
@@ -450,12 +462,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         distanceTextView.text = String.format("%.2f km", distanceInKm)
     }
 
-    private fun updatePaceTextView(pace: Float) {
+    private fun updatePaceTextView() {
         val paceTextView = findViewById<TextView>(R.id.pace_start)
-        val paceInMinutes = pace / 60
-        val minutes = paceInMinutes.toInt()
-        val seconds = ((paceInMinutes - minutes) * 60).toInt()
-        paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+        if (totalDistance > 0) {
+            val minutes = (totalPace / 60).toInt()
+            val seconds = (totalPace % 60).toInt()
+
+            paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+        } else {
+            paceTextView.text = "0:00 min/km"
+        }
     }
 
     private fun updateCheckpointDistanceTextView() {
@@ -464,12 +480,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         distanceTextView.text = String.format("%.2f km", distanceInKm)
     }
 
-    private fun updateCheckpointPaceTextView(pace: Float) {
+    private fun updateCheckpointPaceTextView() {
         val paceTextView = findViewById<TextView>(R.id.pace_checkpoint)
-        val paceInMinutes = pace / 60
-        val minutes = paceInMinutes.toInt()
-        val seconds = ((paceInMinutes - minutes) * 60).toInt()
-        paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+
+        if (checkpointDistance > 0) {
+            val minutes = (checkpointPace / 60).toInt()
+            val seconds = (checkpointPace % 60).toInt()
+
+            paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+        } else {
+            paceTextView.text = "0:00 min/km"
+        }
     }
 
     private fun updateWaypointDistanceTextView() {
@@ -478,29 +499,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         distanceTextView.text = String.format("%.2f km", distanceInKm)
     }
 
-    private fun updateWaypointPaceTextView(pace: Float) {
+    private fun updateWaypointPaceTextView() {
         val paceTextView = findViewById<TextView>(R.id.pace_waypoint)
-        val paceInMinutes = pace / 60
-        val minutes = paceInMinutes.toInt()
-        val seconds = ((paceInMinutes - minutes) * 60).toInt()
-        paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+        if (waypointDistance > 0) {
+            val minutes = (waypointPace / 60).toInt()
+            val seconds = (waypointPace % 60).toInt()
+
+            paceTextView.text = String.format("%d:%02d min/km", minutes, seconds)
+        } else {
+            paceTextView.text = "0:00 min/km"
+        }
     }
 
     private fun updateTrackingState(isTracking: Boolean) {
         val intent = Intent(C.ACTION_UPDATE_TRACKING).apply {
             putExtra(C.EXTRA_IS_TRACKING, isTracking)
+            putExtra("startTime", startTime)
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+        val result = sendBroadcast(intent)
     }
 
     private fun startTracking() {
         isTracking = true
-        updateTrackingState(isTracking)
-        startstopLocationService()
-        startStopButton.setImageResource(R.drawable.pause)
-
         startTime = System.currentTimeMillis()
+        startstopLocationService()
+        Log.d("PRC", "MAIN: started tracking")
+        startStopButton.setImageResource(R.drawable.pause)
         elapsedTimeHandler.postDelayed(updateElapsedTimeRunnable, 1000)
+        elapsedTimeHandler.postDelayed({
+            updateTrackingState(isTracking)
+        }, 1000)
     }
 
 
@@ -531,14 +559,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Reset the tracking data
         totalDistance = 0f
+        checkpointDistance = 0f
+        waypointDistance = 0f
         lastUpdateTime = 0
         mPolyline = null
         lastCheckpoint = null
         lastCheckpointTime = 0L
+        lastUpdateTime = 0L
+        lastWaypointTime = 0L
         currentWaypointMarker = null
-        totalPace = 0f
-        checkpointPace = 0f
-        waypointPace = 0f
+        totalPace = 0.0
+        checkpointPace = 0.0
+        waypointPace = 0.0
     }
 
     private fun saveSessionData() {
@@ -564,6 +596,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace)
 
         for ((marker, timestamp) in checkpointMarkers) {
+            Log.d("DB", "${timestamp} saved in database")
             val latitude = marker.position.latitude
             val longitude = marker.position.longitude
             dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
@@ -626,8 +659,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 // starting the FOREGROUND service
                 // service has to display non-dismissable notification within 5 secs
                 startForegroundService(Intent(this, LocationService::class.java))
+                Log.d("pace", "MAIN: started service")
             } else {
                 startService(Intent(this, LocationService::class.java))
+                Log.d("pace", "MAIN: started service")
             }
         }
 
@@ -656,15 +691,34 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     totalDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, 0f)
                     checkpointDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, 0f)
                     waypointDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, 0f)
+                    totalPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_OVERALL, 0.0)
+                    checkpointPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_CP, 0.0)
+                    waypointPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_WP, 0.0)
+
+                    Log.d("PRC", "MAIN: broadcast recieved: distance = $totalDistance, " +
+                        "pace = $totalPace, CP distance = $checkpointDistance, CP pace = $checkpointPace")
+
+
                     val newPolyline = intent.getSerializableExtra("newPolyline") as? Pair<LatLng, LatLng>
 
-                    Log.d(TAG, "Received location update: TOTALDISTANCE=$totalDistance, CHECKPOINT=$checkpointDistance")
+                    updateDistanceTextView()
+                    updatePaceTextView()
+                    updateCheckpointDistanceTextView()
+                    updateCheckpointPaceTextView()
+                    updateWaypointDistanceTextView()
+                    updateWaypointPaceTextView()
+                    if (isCentered) {
+                        centerMapOnCurrentLocation()
+                    }
+
                     // Draw new polyline on the map
                     newPolyline?.let { (start, end) ->
                         val polyline = mMap.addPolyline(
                             PolylineOptions().add(start, end).color(Color.BLUE).width(5f)
                         )
                         polylines.add(polyline)
+                        track.add("${start.latitude},${start.longitude},${end.latitude},${end.longitude}")
+                        Log.d("DB", "start: $start, end: $end")
                     }
                 }
                 C.NOTIFICATION_ACTION_CP -> {
@@ -674,13 +728,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                     // Handle checkpoint data
                     handleCheckpoint(lat, lng, timestamp)
+
                 }
                 C.NOTIFICATION_ACTION_WP -> {
                     val lat = intent.getDoubleExtra("lat", 0.0)
                     val lng = intent.getDoubleExtra("lng", 0.0)
+                    val timestamp = intent.getLongExtra("timestamp", 0L)
 
                     // Handle waypoint data
-                    handleWaypoint(lat, lng)
+                    handleWaypoint(lat, lng, timestamp)
                 }
             }
         }

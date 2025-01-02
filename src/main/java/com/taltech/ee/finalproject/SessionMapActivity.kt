@@ -88,7 +88,6 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
                     val currLat = points[2].toDouble()
                     val currLon = points[3].toDouble()
 
-                    // Add points to the coordinates list
                     coordinates.add(LatLng(prevLat, prevLon))
                     coordinates.add(LatLng(currLat, currLon))
                 } catch (e: Exception) {

@@ -2,8 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="64dp"
-    android:maxHeight="64dp"
+    android:layout_height="100dp"
+    android:maxHeight="500dp"
     android:orientation="horizontal">
 
     <LinearLayout
@@ -11,32 +11,34 @@
         android:layout_height="match_parent"
         android:layout_marginRight="8dp"
         android:layout_weight="1"
-        android:gravity="right"
+        android:gravity="center"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/overallDistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
+            android:text="0.00"
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/overallPace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
+            android:text="0:00"
+            android:textSize="14sp" />
     </LinearLayout>
 
 
     <!-- no onclick allowed on remoteviews! if you are reusing this component, attach onClick in code-->
+
     <ImageButton
         android:id="@+id/imageButtonCP"
-        android:src="@drawable/ic_checkpoint"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:scaleType="centerInside"
+        android:layout_gravity="center_vertical"
+        android:src="@drawable/ic_checkpoint"
         app:tint="@color/white" />
 
     <LinearLayout
@@ -44,7 +46,7 @@
         android:layout_height="match_parent"
         android:layout_marginRight="8dp"
         android:layout_weight="1"
-        android:gravity="right"
+        android:gravity="center"
         android:orientation="vertical">
 
 
@@ -52,23 +54,24 @@
             android:id="@+id/CPdistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
+            android:text="0.00"
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/CPpace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
+            android:text="0:00"
+            android:textSize="14sp" />
     </LinearLayout>
 
-    <!-- no onclick allowed on remoteviews! if you are reusing this component, attach onClick in code-->
     <ImageButton
         android:id="@+id/imageButtonWP"
         android:src="@drawable/ic_waypoint"
         android:layout_width="48dp"
         android:layout_height="48dp"
+        android:layout_gravity="center_vertical"
+
         android:scaleType="centerInside"
         app:tint="@color/white" />
 
@@ -76,7 +79,7 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:gravity="right"
+        android:gravity="center"
         android:layout_marginRight="8dp"
         android:orientation="vertical">
 
@@ -84,15 +87,15 @@
             android:id="@+id/WPdistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
+            android:text="0.00"
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/WPpace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="TextView"
-            android:textSize="16sp" />
+            android:text="0:00"
+            android:textSize="14sp" />
 
     </LinearLayout>
 
