@@ -19,7 +19,7 @@ import com.google.android.gms.maps.model.PolylineOptions
 
 class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     private var googleMap: GoogleMap? = null
-    private var coordinates: List<LatLng>? = null
+    private var trackCoordinates: List<LatLng>? = null
     private var checkpointCoordinates: List<LatLng>? = null
     private var sessionId: Long = -1
 
@@ -49,25 +49,26 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun loadSessionData(sessionId: Long) {
         val dbHelper = SessionsDatabaseHelper(this)
+
+        // Retrieve track points
+        val trackPoints = dbHelper.getTrackPointsForSession(sessionId)
+        trackCoordinates = trackPoints.map { LatLng(it.latitude, it.longitude) }
+
+        // Retrieve checkpoints
+        val checkpoints = dbHelper.getCheckpointsForSession(sessionId)
+        checkpointCoordinates = checkpoints.map { LatLng(it.latitude, it.longitude) }
+
         val session = dbHelper.getSessionById(sessionId)
-
-        if (session != null) {
-            val track = session.track
-            val distance = session.distance
-            val time = session.time
-            val pace = session.pace
-
-            coordinates = parseTrack(track)
-
-            val checkpoints = dbHelper.getCheckpointsForSession(sessionId)
-            checkpointCoordinates = checkpoints.map { LatLng(it.latitude, it.longitude) }
-            Log.d("DB", "checkpoint coordinates: $checkpointCoordinates")
+        session?.let {
+            val distance = it.distance
+            val time = it.time
+            val pace = it.pace
 
             val sessionText = findViewById<TextView>(R.id.session_id)
-            if (session.name != "Session") {
-                sessionText.text = "${session.name}"
+            sessionText.text = if (it.name != "Session") {
+                it.name
             } else {
-                sessionText.text = "Session $sessionId"
+                "Session $sessionId"
             }
 
             updateSessionText(distance, time, pace)
@@ -99,22 +100,16 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun drawPolyline(coordinates: List<LatLng>) {
-        Log.d("SessionMapActivity", "Started drawPolylineMethod")
-
-        googleMap?.let {
-            Log.d("SessionMapActivity", "Drawing polyline")
+        googleMap?.let { map ->
             val polylineOptions = PolylineOptions().addAll(coordinates)
-            it.addPolyline(polylineOptions)
+            map.addPolyline(polylineOptions)
 
             if (coordinates.isNotEmpty()) {
-                val firstPoint = coordinates[0]
-                it.moveCamera(CameraUpdateFactory.newLatLngZoom(firstPoint, 15f))
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(coordinates.first(), 15f))
             }
 
-            if (checkpointCoordinates?.isNotEmpty() == true) {
-                for (coordinate in checkpointCoordinates!!) {
-                    it.addMarker(MarkerOptions().position(coordinate))
-                }
+            checkpointCoordinates?.forEach { checkpoint ->
+                map.addMarker(MarkerOptions().position(checkpoint))
             }
         }
     }
@@ -180,10 +175,7 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
 
-        if (coordinates?.isNotEmpty() == true) {
-            Log.d("SessionMapActivity", "Coordinates were not empty: $coordinates")
-            drawPolyline(coordinates!!)
-        }
+        trackCoordinates?.let { drawPolyline(it) }
     }
 }
 

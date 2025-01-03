@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isSatelliteView: Boolean = false
 
     private var track: MutableList<String> = mutableListOf()
+    private var trackPoints = mutableListOf<List<Any>>()
 
     private lateinit var optionsButton: ImageButton
     private lateinit var orientationTextView: TextView
@@ -602,9 +603,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
         }
 
+        for (point in trackPoints) {
+            val latitude = point[0] as Double
+            val longitude = point[1] as Double
+            val timestamp = point[2] as Long
+
+            dbHelper.insertTrackPoint(sessionId, latitude, longitude, timestamp)
+        }
+
 
         Toast.makeText(this, "Session and checkpoints saved.", Toast.LENGTH_SHORT).show()
     }
+
 
     private val updateElapsedTimeRunnable = object : Runnable {
         override fun run() {
@@ -686,6 +696,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             when (intent!!.action){
                 C.LOCATION_UPDATE_ACTION -> {
                     Log.d(TAG, "LOCATION UPDATE!")
+                    val currentTime = System.currentTimeMillis()
                     currentLat = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, 0.0)
                     currentLong = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, 0.0)
                     totalDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, 0f)
@@ -710,6 +721,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     if (isCentered) {
                         centerMapOnCurrentLocation()
                     }
+
+                    trackPoints.add(listOf(currentLat, currentLong, currentTime))
 
                     // Draw new polyline on the map
                     newPolyline?.let { (start, end) ->

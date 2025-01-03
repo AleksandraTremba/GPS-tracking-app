@@ -6,11 +6,18 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
         private const val DATABASE_NAME = "sessions.db"
-        private const val DATABASE_VERSION = 4
+        private const val DATABASE_VERSION = 7
 
         // Table name and column names
         const val TABLE_NAME = "sessions"
@@ -29,6 +36,11 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         const val COLUMN_LONGITUDE = "longitude"
         const val COLUMN_TIMESTAMP = "timestamp"
 
+        const val TABLE_TRACK_POINTS = "track_points"
+        const val COLUMN_TRACK_ID = "id"
+        const val COLUMN_TRACK_LATITUDE = "latitude"
+        const val COLUMN_TRACK_LONGITUDE = "longitude"
+        const val COLUMN_TRACK_TIMESTAMP = "timestamp"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -55,10 +67,24 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             );
         """
         db.execSQL(createCheckpointsTableQuery)
+
+        val createTrackPointsTableQuery = """
+        CREATE TABLE $TABLE_TRACK_POINTS (
+            $COLUMN_TRACK_ID INTEGER PRIMARY KEY AUTOINCREMENT,
+            $COLUMN_SESSION_ID INTEGER,
+            $COLUMN_TRACK_LATITUDE REAL,
+            $COLUMN_TRACK_LONGITUDE REAL,
+            $COLUMN_TRACK_TIMESTAMP INTEGER,
+            FOREIGN KEY($COLUMN_SESSION_ID) REFERENCES $TABLE_NAME($COLUMN_ID)
+        );
+        """
+        db.execSQL(createTrackPointsTableQuery)
+
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         db.execSQL("DROP TABLE IF EXISTS $TABLE_CHECKPOINTS")
+        db.execSQL("DROP TABLE IF EXISTS $TABLE_TRACK_POINTS")
         db.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
         onCreate(db)
     }
@@ -89,6 +115,43 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         db.insert(TABLE_CHECKPOINTS, null, values)
         db.close()
     }
+
+    fun insertTrackPoint(sessionId: Long, latitude: Double, longitude: Double, timestamp: Long) {
+        val db = writableDatabase
+        val values = ContentValues().apply {
+            put(COLUMN_SESSION_ID, sessionId)
+            put(COLUMN_TRACK_LATITUDE, latitude)
+            put(COLUMN_TRACK_LONGITUDE, longitude)
+            put(COLUMN_TRACK_TIMESTAMP, timestamp)
+        }
+        db.insert(TABLE_TRACK_POINTS, null, values)
+        db.close()
+    }
+
+    @SuppressLint("Range")
+    fun getTrackPointsForSession(sessionId: Long): List<TrackPoint> {
+        val db = readableDatabase
+        val cursor = db.query(
+            TABLE_TRACK_POINTS,
+            arrayOf(COLUMN_TRACK_ID, COLUMN_TRACK_LATITUDE, COLUMN_TRACK_LONGITUDE, COLUMN_TRACK_TIMESTAMP),
+            "$COLUMN_SESSION_ID = ?",
+            arrayOf(sessionId.toString()),
+            null, null, "$COLUMN_TRACK_ID ASC"
+        )
+
+        val trackPoints = mutableListOf<TrackPoint>()
+        while (cursor.moveToNext()) {
+            val id = cursor.getLong(cursor.getColumnIndex(COLUMN_TRACK_ID))
+            val latitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_TRACK_LATITUDE))
+            val longitude = cursor.getDouble(cursor.getColumnIndex(COLUMN_TRACK_LONGITUDE))
+            val timestamp = cursor.getLong(cursor.getColumnIndex(COLUMN_TRACK_TIMESTAMP))
+            trackPoints.add(TrackPoint(id, sessionId, latitude, longitude, timestamp))
+        }
+        cursor.close()
+        db.close()
+        return trackPoints
+    }
+
 
 
     @SuppressLint("Range")

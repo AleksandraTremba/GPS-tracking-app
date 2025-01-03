@@ -167,6 +167,19 @@ class LocationService : Service() {
 
     private fun onNewLocation(location: Location) {
         Log.i(TAG, "New location: $location")
+
+        val maxAllowedDistance = 500.0f
+
+        if (currentLocation != null) {
+            val distance = location.distanceTo(currentLocation!!)
+            Log.d(TAG, "Distance from previous location: $distance meters")
+
+            if (distance > maxAllowedDistance) {
+                Log.w(TAG, "Location is too far away (${distance}m). Ignoring update.")
+                return
+            }
+        }
+
         if (currentLocation == null){
             locationStart = location
             locationCP = location
