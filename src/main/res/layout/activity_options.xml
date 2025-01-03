@@ -9,25 +9,25 @@
 
     <Button
         android:id="@+id/orientation_button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="North-Up"/>
 
     <Button
         android:id="@+id/centered_map_button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Keep map constantly centered"/>
 
     <Button
         android:id="@+id/satellite_view_button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Sattelite view"/>
 
     <Button
         android:id="@+id/saved_sessions_button"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Saved Sessions" />
 

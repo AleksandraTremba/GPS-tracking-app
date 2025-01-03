@@ -3,6 +3,7 @@ package com.taltech.ee.finalproject
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -234,6 +235,44 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         }
         db.update(TABLE_NAME, values, "$COLUMN_ID = ?", arrayOf(sessionId.toString())) // Ensure sessionId is passed
         db.close()
+    }
+
+    fun exportSessionToGpx(context: Context, sessionId: Long): Uri? {
+        val session = getSessionById(sessionId) ?: return null
+        val checkpoints = getCheckpointsForSession(sessionId)
+        val trackPoints = getTrackPointsForSession(sessionId)
+
+        val gpxContent = StringBuilder()
+        gpxContent.append("""<?xml version="1.0" encoding="UTF-8"?>""")
+        gpxContent.append("""<gpx version="1.1" creator="FinalProject" xmlns="http://www.topografix.com/GPX/1/1">""")
+
+        // Add session metadata
+        gpxContent.append("""<metadata><name>${session.name}</name><time>${SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date())}</time></metadata>""")
+
+        // Add waypoints for checkpoints
+        for (checkpoint in checkpoints) {
+            gpxContent.append("""<wpt lat="${checkpoint.latitude}" lon="${checkpoint.longitude}">""")
+            gpxContent.append("""<time>${SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date(checkpoint.timestamp))}</time>""")
+            gpxContent.append("""</wpt>""")
+        }
+
+        // Add track points
+        gpxContent.append("<trk><trkseg>")
+        for (trackPoint in trackPoints) {
+            gpxContent.append("""<trkpt lat="${trackPoint.latitude}" lon="${trackPoint.longitude}">""")
+            gpxContent.append("""<time>${SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date(trackPoint.timestamp))}</time>""")
+            gpxContent.append("</trkpt>")
+        }
+        gpxContent.append("</trkseg></trk>")
+        gpxContent.append("</gpx>")
+
+        // Save the GPX content to a file
+        val fileName = "session_${sessionId}.gpx"
+        val file = File(context.filesDir, fileName)
+        FileOutputStream(file).use { it.write(gpxContent.toString().toByteArray()) }
+
+        // Return the file URI for sharing
+        return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
 
 

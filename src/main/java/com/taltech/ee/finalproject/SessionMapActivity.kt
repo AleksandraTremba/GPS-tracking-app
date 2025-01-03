@@ -1,6 +1,7 @@
 package com.taltech.ee.finalproject
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -44,8 +45,11 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         findViewById<Button>(R.id.delete_button).setOnClickListener {
             showDeleteConfirmationDialog()
         }
-    }
 
+        findViewById<Button>(R.id.export_button).setOnClickListener {
+            sendSessionAsEmail()
+        }
+    }
 
     private fun loadSessionData(sessionId: Long) {
         val dbHelper = SessionsDatabaseHelper(this)
@@ -142,6 +146,32 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         builder.show()
     }
+
+    private fun sendSessionAsEmail() {
+        val dbHelper = SessionsDatabaseHelper(this)
+        val gpxUri = dbHelper.exportSessionToGpx(this, sessionId)
+
+        if (gpxUri == null) {
+            Toast.makeText(this, "Failed to generate GPX file", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/gpx+xml"
+            putExtra(Intent.EXTRA_SUBJECT, "Exported GPX File")
+            putExtra(Intent.EXTRA_TEXT, "Please find the exported GPX file attached for session $sessionId.")
+            putExtra(Intent.EXTRA_STREAM, gpxUri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        try {
+            startActivity(Intent.createChooser(intent, "Send GPX File"))
+        } catch (e: Exception) {
+            Toast.makeText(this, "No email client found to send the file", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
 
     private fun renameSession(newSessionName: String) {
         val dbHelper = SessionsDatabaseHelper(this)
