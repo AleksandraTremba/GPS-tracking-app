@@ -16,6 +16,9 @@ class C {
         const val LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL = "com.taltech.ee.finalproject.location_update.distanceCPTotal"
         const val LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL = "com.taltech.ee.finalproject.location_update.distanceWPTotal"
 
+        const val LOCATION_UPDATE_ACTION_DISTANCE_CP_DIRECT = "com.taltech.ee.finalproject.location_update.distanceCPDirect"
+        const val LOCATION_UPDATE_ACTION_DISTANCE_WP_DIRECT = "com.taltech.ee.finalproject.location_update.distanceWPDirect"
+
         const val LOCATION_UPDATE_ACTION_PACE_OVERALL = "com.taltech.ee.finalproject.location_update.paceOverall"
         const val LOCATION_UPDATE_ACTION_PACE_CP = "com.taltech.ee.finalproject.location_update.paceCP"
         const val LOCATION_UPDATE_ACTION_PACE_WP = "com.taltech.ee.finalproject.location_update.paceWP"

@@ -44,10 +44,12 @@ class LocationService : Service() {
     private var locationStart: Location? = null
 
     private var distanceCPTotal = 0f
+    private var distanceCPDirect = 0f
     private var paceCP = 0.0
     private var locationCP: Location? = null
 
     private var distanceWPTotal = 0f
+    private var distanceWPDirect = 0f
     private var paceWP = 0.0
     private var locationWP: Location? = null
 
@@ -71,9 +73,6 @@ class LocationService : Service() {
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
         broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
         broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_OVERALL)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_CP)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_WP)
 
         registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
         Log.d("pace", "registered broadcast")
@@ -192,6 +191,7 @@ class LocationService : Service() {
 
 
             if (checkpoint) {
+                distanceCPDirect = location.distanceTo(locationCP!!)
                 distanceCPTotal += location.distanceTo(currentLocation!!)
                 paceCP = countPace(distanceCPTotal, lastCheckpointTime)
                 Log.d("PRC", "SERVICE: CP distance: $distanceCPTotal")
@@ -199,6 +199,7 @@ class LocationService : Service() {
             }
 
             if (waypoint) {
+                distanceWPDirect = location.distanceTo(locationWP!!)
                 distanceWPTotal += location.distanceTo(currentLocation!!)
                 paceWP = countPace(distanceWPTotal, lastWaypointTime)
                 Log.d("PRC", "SERVICE: WP distance: $distanceWPTotal")
@@ -230,10 +231,12 @@ class LocationService : Service() {
                 putExtra(C.LOCATION_UPDATE_ACTION_PACE_OVERALL, paceOverall)
                 putExtra(C.LOCATION_UPDATE_ACTION_PACE_CP, paceCP)
                 putExtra(C.LOCATION_UPDATE_ACTION_PACE_WP, paceWP)
+                putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_DIRECT, distanceCPDirect)
+                putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_DIRECT, distanceWPDirect)
             }
 
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
-            Log.d("PRC", "SERVICE: broadcast on new location sent to main")
+            Log.d("PRC", "SERVICE: broadcast on new location sent to main, CP distance direct: $distanceCPDirect")
             Log.d(TAG, "Broadcast LOCATION_UPDATE_ACTION sent")
         }
 
@@ -373,12 +376,14 @@ class LocationService : Service() {
         if (distanceCPTotal > 0) {
             Log.d("PRC", "SERVICE: CP distance: $distanceCPTotal")
             notifyview.setTextViewText(R.id.CPdistance, "%.2f".format(distanceCPTotal / 1000))
+            notifyview.setTextViewText(R.id.CPdistanceDirect, "%.2f".format(distanceCPDirect / 1000))
             notifyview.setTextViewText(R.id.CPpace, "%d:%02d".format(CPminutes, CPseconds))
         }
 
         if (distanceWPTotal > 0) {
             Log.d("PRC", "SERVICE: WP distance: $distanceWPTotal")
-            notifyview.setTextViewText(R.id.WPdistance, "%.2f".format(distanceCPTotal / 1000))
+            notifyview.setTextViewText(R.id.WPdistance, "%.2f".format(distanceWPTotal / 1000))
+            notifyview.setTextViewText(R.id.WPdistanceDirect, "%.2f".format(distanceWPDirect / 1000))
             notifyview.setTextViewText(R.id.WPpace, "%d:%02d".format(WPminutes, WPseconds))
         }
 
@@ -386,10 +391,10 @@ class LocationService : Service() {
         val builder = NotificationCompat.Builder(applicationContext, C.NOTIFICATION_CHANNEL)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(false)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContent(notifyview)
-
         builder.setContent(notifyview)
 
         // Super important, start as foreground service - ie android considers this as an active app. Need visual reminder - notification.

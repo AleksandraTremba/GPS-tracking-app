@@ -58,6 +58,13 @@
             android:textSize="14sp" />
 
         <TextView
+            android:id="@+id/CPdistanceDirect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0.00"
+            android:textSize="14sp" />
+
+        <TextView
             android:id="@+id/CPpace"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -85,6 +92,13 @@
 
         <TextView
             android:id="@+id/WPdistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0.00"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/WPdistanceDirect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="0.00"

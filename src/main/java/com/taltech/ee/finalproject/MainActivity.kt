@@ -10,6 +10,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -17,6 +21,7 @@ import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -35,12 +40,10 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
-import com.taltech.ee.finalproject.C
 import com.taltech.ee.finalproject.LocationService
-import com.taltech.ee.finalproject.R
 
 
-class MainActivity : AppCompatActivity(), OnMapReadyCallback {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListener {
     companion object {
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
@@ -97,12 +100,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var lastWaypointTime: Long = 0
 
     private var checkpointDistance: Float = 0f
+    private var checkpointDirectDistance = 0f
     private var checkpointPace = 0.0
 
     private var waypointDistance: Float = 0f
+    private var waypointDirectDistance = 0f
     private var waypointPace = 0.0
 
     private var elapsedTime = 0
+
+    //compass
+    private lateinit var compassImage: ImageView
+    private lateinit var sensorManager: SensorManager
+    private lateinit var magnetometer: Sensor
+    private lateinit var accelerometer: Sensor
+
+    private val lastAccelerometer = FloatArray(3)
+    private val lastMagnetometer = FloatArray(3)
+    private var lastAccelerometerSet = false
+    private var lastMagnetometerSet = false
+    private val rotationMatrix = FloatArray(9)
+    private val orientation = FloatArray(3)
+    private var isCompassOn = true
+
 
 
     // ============================================== MAIN ENTRY - ONCREATE =============================================
@@ -123,9 +143,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_OVERALL)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_CP)
-        broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION_PACE_WP)
 
         elapsedTimeHandler = android.os.Handler(mainLooper)
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -135,6 +152,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
         isCentered = sharedPreferences.getBoolean("isCentered", false)
         isSatelliteView = sharedPreferences.getBoolean("isSatelliteView", true)
+        isCompassOn = sharedPreferences.getBoolean("isCompassOn", true)
 
         startStopButton = findViewById(R.id.start_stop_button)
         timeElapsedTextView = findViewById(R.id.time_elapsed_start)
@@ -174,7 +192,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
 
         orientationTextView = findViewById(R.id.orientation)
-        orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
+        orientationTextView.text = if (isNorthUp) "North-Up" else "User-Chosen"
+
+        //compass
+        compassImage = findViewById(R.id.compass_arrow)
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)!!
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)!!
+
+        toggleCompass(isCompassOn)
+
+
 
 //        val intentFilter = IntentFilter().apply {
 //            addAction(C.LOCATION_UPDATE_ACTION)
@@ -199,12 +228,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onResume()
 
         LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
-
+        isCompassOn.let {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI)
+        }
     }
 
     override fun onPause() {
         Log.d(TAG, "onPause")
         super.onPause()
+        isCompassOn.let {sensorManager.unregisterListener(this)}
     }
 
     override fun onStop() {
@@ -331,6 +364,46 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
     // ============================================== HANDLERS =============================================
+    override fun onSensorChanged(event: SensorEvent?) {
+        event?.let {
+            if (it.sensor.type == Sensor.TYPE_MAGNETIC_FIELD) {
+                System.arraycopy(it.values, 0, lastMagnetometer, 0, it.values.size)
+                lastMagnetometerSet = true
+            } else if (it.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+                System.arraycopy(it.values, 0, lastAccelerometer, 0, it.values.size)
+                lastAccelerometerSet = true
+            }
+
+            if (lastAccelerometerSet && lastMagnetometerSet) {
+                // Calculate rotation matrix and orientation
+                SensorManager.getRotationMatrix(rotationMatrix, null, lastAccelerometer, lastMagnetometer)
+                SensorManager.getOrientation(rotationMatrix, orientation)
+
+                // Calculate azimuth angle
+                val azimuthInRadians = orientation[0]
+                val azimuthInDegrees = Math.toDegrees(azimuthInRadians.toDouble()).toFloat()
+
+                // Rotate the compass arrow to point north
+                compassImage.rotation = -azimuthInDegrees // Negative to make it point north
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+    }
+
+    fun toggleCompass(isEnabled: Boolean) {
+        isCompassOn = isEnabled
+        if (isEnabled) {
+            compassImage.visibility = View.VISIBLE
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_UI)
+        } else {
+            compassImage.visibility = View.GONE
+            sensorManager.unregisterListener(this)
+        }
+    }
+
     private fun alertStopSession() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("End the session")
@@ -399,7 +472,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         sharedPreferences.edit().putBoolean("isNorthUp", isNorthUp).apply()
 
         // Update TextView in main activity to reflect the orientation
-        orientationTextView.text = if (isNorthUp) "North-Up" else "Direction-Up"
+        orientationTextView.text = if (isNorthUp) "North-Up" else "User-Chosen"
 
         // Apply map updates
         if (isNorthUp) {
@@ -477,8 +550,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun updateCheckpointDistanceTextView() {
         val distanceTextView = findViewById<TextView>(R.id.distance_checkpoint)
+        val directDistanceTextView = findViewById<TextView>(R.id.distance_checkpoint_direct)
         val distanceInKm = checkpointDistance / 1000
+        val directDistanceInKm = checkpointDirectDistance /1000
+
         distanceTextView.text = String.format("%.2f km", distanceInKm)
+        directDistanceTextView.text = String.format("%.2f km", directDistanceInKm)
     }
 
     private fun updateCheckpointPaceTextView() {
@@ -496,8 +573,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun updateWaypointDistanceTextView() {
         val distanceTextView = findViewById<TextView>(R.id.distance_waypoint)
+        val directDistanceTextView = findViewById<TextView>(R.id.distance_waypoint_direct)
         val distanceInKm = waypointDistance / 1000
+        val directDistanceInKm = waypointDirectDistance /1000
         distanceTextView.text = String.format("%.2f km", distanceInKm)
+        directDistanceTextView.text = String.format("%.2f km", directDistanceInKm)
     }
 
     private fun updateWaypointPaceTextView() {
@@ -705,9 +785,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     totalPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_OVERALL, 0.0)
                     checkpointPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_CP, 0.0)
                     waypointPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_WP, 0.0)
+                    checkpointDirectDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_DIRECT, 0f)
+                    waypointDirectDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_DIRECT, 0f)
 
                     Log.d("PRC", "MAIN: broadcast recieved: distance = $totalDistance, " +
-                        "pace = $totalPace, CP distance = $checkpointDistance, CP pace = $checkpointPace")
+                        "CP distance = $checkpointDistance, CP distance direct = $checkpointDirectDistance")
 
 
                     val newPolyline = intent.getSerializableExtra("newPolyline") as? Pair<LatLng, LatLng>

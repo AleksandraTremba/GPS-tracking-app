@@ -26,6 +26,12 @@
         android:text="Sattelite view"/>
 
     <Button
+        android:id="@+id/compass_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Compass view"/>
+
+    <Button
         android:id="@+id/saved_sessions_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
