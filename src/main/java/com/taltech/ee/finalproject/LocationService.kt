@@ -17,6 +17,9 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
+import org.json.JSONObject
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 
 class LocationService : Service() {
@@ -62,6 +65,7 @@ class LocationService : Service() {
     private var checkpoint = false
     private var waypoint = false
 
+    private var currentSessionIdBackend: String = ""
 
 
     override fun onCreate() {
@@ -133,6 +137,9 @@ class LocationService : Service() {
                 putExtra("lng", latLng.longitude)
                 putExtra("timestamp", currentTime)
             }
+
+            postLocationToBackend(location, "00000000-0000-0000-0000-000000000003")
+
             LocalBroadcastManager.getInstance(this).sendBroadcast(checkpointIntent)
             Log.d("PRC", "SERVICE: checkpoint added, current time: $lastCheckpointTime")
 
@@ -155,6 +162,9 @@ class LocationService : Service() {
                 putExtra("lng", latLng.longitude)
                 putExtra("timestamp", currentTime)
             }
+
+            postLocationToBackend(location, "00000000-0000-0000-0000-000000000002")
+
             LocalBroadcastManager.getInstance(this).sendBroadcast(waypointIntent)
             Log.d("PRC", "SERVICE: waypoint added, current time: $lastCheckpointTime")
 
@@ -178,6 +188,8 @@ class LocationService : Service() {
                 return
             }
         }
+
+        postLocationToBackend(location, "00000000-0000-0000-0000-000000000001")
 
         if (currentLocation == null){
             locationStart = location
@@ -405,11 +417,61 @@ class LocationService : Service() {
 
     private fun startTracking() {
         isTracking = true
+        backendSessionStart()
     }
 
     private fun stopTracking() {
         isTracking = false
     }
+
+    private fun backendSessionStart() {
+        if (!BackendHandler.isUserLoggedIn(this)) {
+            Log.e("BCND", "User is not logged in!")
+            return
+        }
+
+        BackendHandler.startSession(
+            context = this,
+            sessionName = "Session on ${System.currentTimeMillis()}",
+            sessionDescription = "Tracking session",
+            onSuccess = { sessionId ->
+                Log.d("BCND", "Session started with ID: $sessionId")
+                currentSessionIdBackend = sessionId
+            },
+            onError = { error ->
+                Log.e("BCND", "Failed to start session: $error")
+            }
+        )
+    }
+
+    private fun postLocationToBackend(location: Location, locationTypeId: String) {
+        if (currentSessionIdBackend.isNullOrEmpty()) {
+            Log.e(TAG, "Session ID is not initialized. Cannot post location.")
+            return
+        }
+
+        val payload = JSONObject().apply {
+            put("recordedAt", DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(location.time)))
+            put("latitude", location.latitude)
+            put("longitude", location.longitude)
+            put("accuracy", location.accuracy)
+            put("altitude", location.altitude)
+            put("verticalAccuracy", location.verticalAccuracyMeters)
+            put("gpsLocationTypeId", locationTypeId)
+        }
+
+        Log.d("BCND", "Payload to be sent to backend: $payload")
+
+        BackendHandler.postLocation(this, payload, currentSessionIdBackend,
+            onSuccess = {
+                Log.d("BCND", "Location successfully posted to backend.")
+            },
+            onError = { error ->
+                Log.e("BCND", "Failed to post location: $error")
+            }
+        )
+    }
+
 
 
     private inner class InnerBroadcastReceiver: BroadcastReceiver() {

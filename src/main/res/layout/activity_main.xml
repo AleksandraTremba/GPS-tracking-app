@@ -33,7 +33,7 @@
             android:layout_marginEnd="16dp"
             android:contentDescription="Compass Arrow"
             android:layout_alignParentEnd="true"
-            app:tint="@color/white" />
+            app:tint="?attr/android:textColor" />
 
         <!-- Empty Space -->
         <Space

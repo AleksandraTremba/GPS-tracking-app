@@ -1,5 +1,6 @@
 package com.taltech.ee.finalproject
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -15,6 +16,7 @@ class OptionsDialogFragment : DialogFragment() {
 
     private lateinit var sharedPreferences: SharedPreferences
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -88,7 +90,11 @@ class OptionsDialogFragment : DialogFragment() {
             startActivity(intent)
         }
 
-
+        val accountButton = view.findViewById<Button>(R.id.account_button)
+        accountButton.setOnClickListener {
+            val intent = Intent(requireContext(), AccountActivity::class.java)
+            startActivity(intent)
+        }
 
         return view
     }

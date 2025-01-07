@@ -37,6 +37,10 @@
         </activity>
         <activity android:name=".SessionMapActivity">
         </activity>
+        <activity android:name=".AccountActivity">
+        </activity>
+        <activity android:name=".BackendHandler">
+        </activity>
 
         <receiver android:name=".MainActivity$InnerBroadcastReceiver"
             android:exported="true">
