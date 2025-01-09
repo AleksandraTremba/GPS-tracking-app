@@ -1,10 +1,13 @@
 package com.taltech.ee.finalproject.activities
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +16,9 @@ import com.android.volley.toolbox.Volley
 import org.json.JSONObject
 import com.android.volley.Request
 import com.android.volley.Response
+import com.squareup.picasso.Callback
+import com.squareup.picasso.NetworkPolicy
+import com.squareup.picasso.Picasso
 import com.taltech.ee.finalproject.backend.HttpSingletonHandler
 import com.taltech.ee.finalproject.R
 
@@ -65,18 +71,49 @@ class AccountActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("MissingInflatedId")
     private fun showLoggedInView(username: String) {
         setContentView(R.layout.activity_logged_in)
 
         val helloTextView: TextView = findViewById(R.id.helloTextView)
         val logoutButton: Button = findViewById(R.id.logoutButton)
+        val catImageView: ImageButton = findViewById(R.id.catImageView)
 
         helloTextView.text = "Hello, $username!"
+
+        loadRandomCat(catImageView)
+
         logoutButton.setOnClickListener {
             sharedPreferences.edit().clear().apply()
             showPreviewView()
         }
+
+        catImageView.setOnClickListener {
+            loadRandomCat(catImageView)
+        }
     }
+
+    private fun loadRandomCat(imageButton: ImageButton) {
+        // Add a random query parameter to ensure a fresh image is loaded
+        val url = "https://cataas.com/cat?random=${System.currentTimeMillis()}"
+
+        Picasso.get()
+            .load(url)
+            .networkPolicy(NetworkPolicy.NO_CACHE)
+            .into(imageButton, object : Callback {
+                override fun onSuccess() {
+                    // Successfully loaded the image
+                }
+
+                override fun onError(e: Exception?) {
+                    Log.e("CAT_LOAD_ERROR", "Failed to load cat", e)
+                    Toast.makeText(this@AccountActivity, "Failed to load cat", Toast.LENGTH_SHORT).show()
+                }
+            })
+    }
+
+
+
 
     private fun showRegistrationView() {
         setContentView(R.layout.activity_register)
@@ -228,4 +265,5 @@ class AccountActivity : AppCompatActivity() {
 
         httpHandler.addToRequestQueue(stringRequest, "loginAccount")
     }
+
 }

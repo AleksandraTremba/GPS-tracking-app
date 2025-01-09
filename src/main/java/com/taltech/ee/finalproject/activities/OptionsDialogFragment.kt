@@ -10,8 +10,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import com.taltech.ee.finalproject.R
+import com.taltech.ee.finalproject.location.LocationService
 
 class OptionsDialogFragment : DialogFragment() {
 
@@ -32,6 +36,7 @@ class OptionsDialogFragment : DialogFragment() {
         val centeredMapButton = view.findViewById<Button>(R.id.centered_map_button)
         val satelliteViewButton = view.findViewById<Button>(R.id.satellite_view_button)
         val compassButton = view.findViewById<Button>(R.id.compass_button) // New button for compass
+        val intervalButton = view.findViewById<Button>(R.id.interval_button)
 
         // Get saved values from preferences and set the initial text
         val isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
@@ -85,6 +90,11 @@ class OptionsDialogFragment : DialogFragment() {
             (activity as MainActivity).toggleCompass(newCompassState)
         }
 
+        intervalButton.setOnClickListener {
+            showIntervalDialog()
+        }
+
+
         val savedSessionsButton = view.findViewById<Button>(R.id.saved_sessions_button)
         savedSessionsButton.setOnClickListener {
             val intent = Intent(requireContext(), SavedSessionsActivity::class.java)
@@ -99,4 +109,27 @@ class OptionsDialogFragment : DialogFragment() {
 
         return view
     }
+
+    // Inside showIntervalDialog()
+    private fun showIntervalDialog() {
+        val builder = AlertDialog.Builder(requireActivity())
+        builder.setTitle("Update interval")
+
+        val input = EditText(requireActivity())
+        input.setHint("Enter GPS update interval (in milliseconds):")
+        builder.setView(input)
+
+        builder.setPositiveButton("Change") { _, _ ->
+            val interval = input.text.toString().toLongOrNull()
+            if (interval != null) {
+                Log.d("OPTIONS", "inteval wasnt null")
+                // Ensure the context is correct for LocationService
+                (activity as MainActivity).changeUpdateInterval(interval)
+            }
+        }
+        builder.setNegativeButton("Cancel", null)
+
+        builder.show()
+    }
+
 }

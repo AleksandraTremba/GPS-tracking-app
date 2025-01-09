@@ -29,9 +29,7 @@ class LocationService : Service() {
         private val TAG = this::class.java.declaringClass!!.simpleName
     }
 
-
-    // The desired intervals for location updates. Inexact. Updates may be more or less frequent.
-    private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 2000
+    private var UPDATE_INTERVAL_IN_MILLISECONDS: Long = 2000
     private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
     private val MAX_ALLOWED_ACCURACY = 50.0f
     private val FILTER_ALPHA = 0.2f
@@ -522,6 +520,8 @@ class LocationService : Service() {
                 C.ACTION_UPDATE_TRACKING -> {
                     isTracking = intent.getBooleanExtra(C.EXTRA_IS_TRACKING, false)
                     startTime = intent.getLongExtra("startTime", startTime)
+                    UPDATE_INTERVAL_IN_MILLISECONDS = intent.getLongExtra("interval", UPDATE_INTERVAL_IN_MILLISECONDS)
+                    Log.d(TAG, "INTERVAL: $UPDATE_INTERVAL_IN_MILLISECONDS")
                     if (isTracking) {
                         startTracking()
                     } else {

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="16dp">
+
+    <!-- Map on the left -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="2"
+        android:layout_marginEnd="16dp" />
+
+    <!-- Right-side panel with Top Bar and Bottom Bar -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Top Bar -->
+        <LinearLayout
+            android:id="@+id/top_bar"
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <!-- North-Up Text -->
+            <TextView
+                android:id="@+id/orientation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="North-Up"
+                android:textSize="16sp"
+                android:layout_marginEnd="16dp" />
+
+            <ImageView
+                android:id="@+id/compass_arrow"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/compass_arrow"
+                android:contentDescription="Compass Arrow"
+                android:layout_marginEnd="16dp"
+                app:tint="?attr/android:textColor" />
+
+            <!-- Empty Space -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <!-- Options Button -->
+            <ImageButton
+                android:id="@+id/options_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/menu"
+                android:background="@drawable/roundcorner"
+                android:scaleType="centerInside"
+                android:padding="10dp"
+                app:tint="@color/white" />
+        </LinearLayout>
+
+        <!-- Bottom Bar -->
+        <ScrollView
+            android:id="@+id/bottom_bar_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:id="@+id/bottom_bar"
+                android:orientation="vertical"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <!-- Start/Stop Section -->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp">
+                    <ImageButton
+                        android:id="@+id/start_stop_button"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/play"
+                        android:background="@drawable/roundcorner"
+                        android:scaleType="centerInside"
+                        android:padding="10dp"
+                        app:tint="@color/white" />
+                    <TextView
+                        android:id="@+id/distance_start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00 km"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/time_elapsed_start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="00:00:00"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/pace_start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00 min/km"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- Checkpoint Section -->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp">
+                    <ImageButton
+                        android:id="@+id/checkpoint_icon"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_checkpoint"
+                        android:background="@drawable/roundcorner"
+                        android:scaleType="centerInside"
+                        android:padding="5dp"
+                        app:tint="@color/white" />
+                    <TextView
+                        android:id="@+id/distance_checkpoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00 km"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/distance_checkpoint_direct"
+                        android:text="0.00 km"
+                        android:textSize="12sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+
+                    <TextView
+                        android:id="@+id/time_elapsed_checkpoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="00:00:00"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/pace_checkpoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00 min/km"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- Waypoint Section -->
+                <LinearLayout
+                    android:orientation="vertical"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/waypoint_icon"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:src="@drawable/ic_waypoint"
+                        android:background="@drawable/roundcorner"
+                        android:scaleType="centerInside"
+                        android:padding="5dp"
+                        app:tint="@color/white" />
+                    <TextView
+                        android:id="@+id/distance_waypoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00 km"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/distance_waypoint_direct"
+                        android:text="0.00 km"
+                        android:textSize="12sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"/>
+                    <TextView
+                        android:id="@+id/time_elapsed_waypoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="00:00:00"
+                        android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/pace_waypoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0:00 min/km"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</LinearLayout>

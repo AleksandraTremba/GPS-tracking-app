@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -44,6 +45,7 @@ import com.taltech.ee.finalproject.location.C
 import com.taltech.ee.finalproject.location.LocationService
 import com.taltech.ee.finalproject.R
 import com.taltech.ee.finalproject.database.SessionsDatabaseHelper
+import com.taltech.ee.finalproject.location.LocationService.Companion
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListener {
@@ -127,6 +129,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     private var isCompassOn = true
 
     private var sessionIDBackend: String = "Empty"
+
+    private var updateInterval: Long = 2000
+    private var savedStateBundle: Bundle? = null
 
 
 
@@ -261,6 +266,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         Log.d(TAG, "onRestart")
         super.onRestart()
     }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Handle orientation-specific UI updates here, if needed
+    }
+
 
     // ============================================== NOTIFICATION CHANNEL CREATION =============================================
     private fun createNotificationChannel() {
@@ -470,6 +481,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
             centerMapOnCurrentLocation()
         }
         mapViewState()
+
+        savedStateBundle?.let {
+            restoreMapState(it)
+            savedStateBundle = null
+        }
+
     }
 
     fun updateOrientation(isNorthUp: Boolean) {
@@ -535,7 +552,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
         } else {
             // Handle the case where currentLat and currentLong are not set
-            Toast.makeText(this, "Current location not available", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -561,11 +577,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         val distanceTextView = findViewById<TextView>(R.id.distance_checkpoint)
         val directDistanceTextView = findViewById<TextView>(R.id.distance_checkpoint_direct)
         val distanceInKm = checkpointDistance / 1000
-        val directDistanceInKm = checkpointDirectDistance /1000
+        val directDistanceInKm = checkpointDirectDistance / 1000
 
-        distanceTextView.text = String.format("%.2f km", distanceInKm)
-        directDistanceTextView.text = String.format("%.2f km", directDistanceInKm)
+        if (distanceTextView != null) {
+            distanceTextView.text = String.format("%.2f km", distanceInKm)
+        } else {
+            Log.e("MainActivity", "distance_checkpoint TextView not found")
+        }
+
+        if (directDistanceTextView != null) {
+            directDistanceTextView.text = String.format("%.2f km", directDistanceInKm)
+        } else {
+            Log.e("MainActivity", "distance_checkpoint_direct TextView not found")
+        }
     }
+
 
     private fun updateCheckpointPaceTextView() {
         val paceTextView = findViewById<TextView>(R.id.pace_checkpoint)
@@ -601,10 +627,136 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("isTracking", isTracking)
+        outState.putLong("startTime", startTime)
+        outState.putLong("lastCheckpointTime", lastCheckpointTime)
+        outState.putLong("lastWaypointTime", lastWaypointTime)
+
+        // Save checkpoint markers
+        val checkpointData = checkpointMarkers.map { Pair(it.first.position, it.second) }
+        outState.putSerializable("checkpointMarkers", ArrayList(checkpointData))
+
+        // Save waypoint markers
+        currentWaypointMarker?.let {
+            outState.putParcelable("currentWaypoint", it.position)
+            outState.putLong("currentWaypointTime", lastWaypointTime)
+        }
+
+        // Save polylines
+        outState.putStringArrayList("track", ArrayList(track))
+
+        // Save tracking data
+        outState.putFloat("totalDistance", totalDistance)
+        outState.putFloat("checkpointDistance", checkpointDistance)
+        outState.putFloat("waypointDistance", waypointDistance)
+
+        // Save direct distances
+        outState.putFloat("checkpointDirectDistance", checkpointDirectDistance)
+        outState.putFloat("waypointDirectDistance", waypointDirectDistance)
+
+        // Save pace data
+        outState.putDouble("totalPace", totalPace)
+        outState.putDouble("checkpointPace", checkpointPace)
+        outState.putDouble("waypointPace", waypointPace)
+
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+
+        isTracking = savedInstanceState.getBoolean("isTracking", false)
+        updateStartStopButton()
+
+        // Save the bundle for deferred restoration
+        savedStateBundle = savedInstanceState
+
+        startTime = savedInstanceState.getLong("startTime", 0L)
+        lastCheckpointTime = savedInstanceState.getLong("lastCheckpointTime", 0L)
+        lastWaypointTime = savedInstanceState.getLong("lastWaypointTime", 0L)
+        if (isTracking) {
+            elapsedTimeHandler.post(updateElapsedTimeRunnable)
+        }
+
+        // Restore tracking data
+        totalDistance = savedInstanceState.getFloat("totalDistance", 0f)
+        checkpointDistance = savedInstanceState.getFloat("checkpointDistance", 0f)
+        waypointDistance = savedInstanceState.getFloat("waypointDistance", 0f)
+
+        // Restore direct distances
+        checkpointDirectDistance = savedInstanceState.getFloat("checkpointDirectDistance", 0f)
+        waypointDirectDistance = savedInstanceState.getFloat("waypointDirectDistance", 0f)
+
+        // Restore pace data
+        totalPace = savedInstanceState.getDouble("totalPace", 0.0)
+        checkpointPace = savedInstanceState.getDouble("checkpointPace", 0.0)
+        waypointPace = savedInstanceState.getDouble("waypointPace", 0.0)
+
+        // Update the UI with restored data
+        updateUI()
+    }
+
+
+    private fun updateUI() {
+        updateDistanceTextView()
+        updateCheckpointDistanceTextView()
+        updateWaypointDistanceTextView()
+        updatePaceTextView()
+        updateCheckpointPaceTextView()
+        updateWaypointPaceTextView()
+    }
+
+    private fun restoreMapState(savedInstanceState: Bundle) {
+        // Restore checkpoint markers
+        val checkpointData = savedInstanceState.getSerializable("checkpointMarkers") as? ArrayList<Pair<LatLng, Long>>
+        checkpointData?.forEach { (position, timestamp) ->
+            val marker = mMap.addMarker(MarkerOptions().position(position).title("Checkpoint"))
+            marker?.let { checkpointMarkers.add(Pair(it, timestamp)) }
+        }
+
+        // Restore waypoint marker
+        val waypointPosition = savedInstanceState.getParcelable<LatLng>("currentWaypoint")
+        if (waypointPosition != null) {
+            currentWaypointMarker = mMap.addMarker(
+                MarkerOptions()
+                    .position(waypointPosition)
+                    .title("Waypoint")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
+            )
+            lastWaypointTime = savedInstanceState.getLong("currentWaypointTime", 0L)
+        }
+
+        // Restore polylines
+        val savedTrack = savedInstanceState.getStringArrayList("track")
+        savedTrack?.forEach { segment ->
+            val coordinates = segment.split(",")
+            if (coordinates.size == 4) {
+                val start = LatLng(coordinates[0].toDouble(), coordinates[1].toDouble())
+                val end = LatLng(coordinates[2].toDouble(), coordinates[3].toDouble())
+                val polyline = mMap.addPolyline(PolylineOptions().add(start, end).color(Color.BLUE).width(5f))
+                polylines.add(polyline)
+            }
+        }
+    }
+
+
+
+    private fun updateStartStopButton() {
+        if (isTracking) {
+            startStopButton.setImageResource(R.drawable.pause)
+        } else {
+            startStopButton.setImageResource(R.drawable.play)
+        }
+    }
+
+
+
     private fun updateTrackingState(isTracking: Boolean) {
         val intent = Intent(C.ACTION_UPDATE_TRACKING).apply {
             putExtra(C.EXTRA_IS_TRACKING, isTracking)
             putExtra("startTime", startTime)
+            putExtra("interval", updateInterval)
         }
         val result = sendBroadcast(intent)
     }
@@ -687,10 +839,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace, sessionIDBackend)
 
         for ((marker, timestamp) in checkpointMarkers) {
-            Log.d("DB", "${timestamp} saved in database")
-            val latitude = marker.position.latitude
-            val longitude = marker.position.longitude
-            dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
+            Log.d("DB", "$marker, ${timestamp} saved in database")
+            if (marker.position.latitude != 0.0 && marker.position.longitude != 0.0) {
+                val latitude = marker.position.latitude
+                val longitude = marker.position.longitude
+                dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
+            }
         }
 
         for (point in trackPoints) {
@@ -698,7 +852,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
             val longitude = point[1] as Double
             val timestamp = point[2] as Long
 
-            dbHelper.insertTrackPoint(sessionId, latitude, longitude, timestamp)
+            if (latitude != 0.0 || longitude != 0.0) {
+                dbHelper.insertTrackPoint(sessionId, latitude, longitude, timestamp)
+            }
         }
 
 
@@ -777,6 +933,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     fun buttonCPOnClick(view: View) {
         Log.d(TAG, "buttonCPOnClick")
         sendBroadcast(Intent(C.NOTIFICATION_ACTION_CP))
+    }
+
+    fun changeUpdateInterval(newInterval: Long) {
+        updateInterval = newInterval
+        Log.d(TAG, "Interval is now: $updateInterval")
     }
 
     // ============================================== BROADCAST RECEIVER =============================================

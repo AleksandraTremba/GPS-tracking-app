@@ -52,10 +52,6 @@ class SavedSessionsActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        var deleteButton = findViewById<Button>(R.id.delete_button)
-        deleteButton.setOnClickListener{
-            dbHelper.clearDatabase()
-        }
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, sessionList)
         sessionsListView.adapter = adapter
 
