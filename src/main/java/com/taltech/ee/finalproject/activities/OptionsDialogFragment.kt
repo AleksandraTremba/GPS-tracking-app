@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.activities
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import androidx.fragment.app.DialogFragment
+import com.taltech.ee.finalproject.R
 
 class OptionsDialogFragment : DialogFragment() {
 
@@ -34,7 +35,7 @@ class OptionsDialogFragment : DialogFragment() {
 
         // Get saved values from preferences and set the initial text
         val isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
-        val isCentered = sharedPreferences.getBoolean("isCentered", false)
+        val isCentered = sharedPreferences.getBoolean("isCentered", true)
         val isSatelliteViewButton = sharedPreferences.getBoolean("isSatelliteView", false)
         val isCompassOn = sharedPreferences.getBoolean("isCompassOn", true) // Add this to check compass status
 
@@ -57,7 +58,7 @@ class OptionsDialogFragment : DialogFragment() {
         }
 
         centeredMapButton.setOnClickListener {
-            val currentCentered = sharedPreferences.getBoolean("isCentered", false)
+            val currentCentered = sharedPreferences.getBoolean("isCentered", true)
             sharedPreferences.edit().putBoolean("isCentered", !currentCentered).apply()
             centeredMapButton.text = if (currentCentered) "Keep map constantly centered" else "Stop Keeping Map Centered"
             (activity as MainActivity).toggleMapCentering(!currentCentered)

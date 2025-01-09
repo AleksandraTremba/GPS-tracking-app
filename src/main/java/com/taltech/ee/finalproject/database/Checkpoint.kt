@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.database
 
 data class Checkpoint(
     val id: Long,

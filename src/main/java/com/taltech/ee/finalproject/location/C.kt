@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.location
 
 class C {
     companion object {
@@ -22,6 +22,8 @@ class C {
         const val LOCATION_UPDATE_ACTION_PACE_OVERALL = "com.taltech.ee.finalproject.location_update.paceOverall"
         const val LOCATION_UPDATE_ACTION_PACE_CP = "com.taltech.ee.finalproject.location_update.paceCP"
         const val LOCATION_UPDATE_ACTION_PACE_WP = "com.taltech.ee.finalproject.location_update.paceWP"
+
+        const val BACKEND_ID_UPDATE = "com.taltech.ee.finalproject.id_update"
 
 
         const val LOCATION_UPDATE_ACTION_POLYLINE = "com.taltech.ee.finalproject.location_update.polyline"

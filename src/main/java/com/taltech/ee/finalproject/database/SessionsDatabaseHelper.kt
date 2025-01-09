@@ -1,9 +1,8 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.database
 
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -18,7 +17,7 @@ import java.util.Locale
 class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
     companion object {
         private const val DATABASE_NAME = "sessions.db"
-        private const val DATABASE_VERSION = 7
+        private const val DATABASE_VERSION = 8
 
         // Table name and column names
         const val TABLE_NAME = "sessions"
@@ -28,6 +27,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         const val COLUMN_DISTANCE = "distance"
         const val COLUMN_TIME = "time"
         const val COLUMN_PACE = "pace"
+        const val COLUMN_BACKEND_ID = "backend_id"
 
         // Table name and column names for checkpoints
         const val TABLE_CHECKPOINTS = "checkpoints"
@@ -52,7 +52,8 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
                 $COLUMN_TRACK TEXT,
                 $COLUMN_DISTANCE REAL,
                 $COLUMN_TIME INTEGER,
-                $COLUMN_PACE TEXT
+                $COLUMN_PACE TEXT,
+                $COLUMN_BACKEND_ID TEXT
             );
         """
         db.execSQL(createTableQuery)
@@ -90,7 +91,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         onCreate(db)
     }
 
-    fun insertSession(track: String, distance: Float, time: Long, pace: String): Long {
+    fun insertSession(track: String, distance: Float, time: Long, pace: String, backendId: String): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
             put(COLUMN_NAME, "Session")
@@ -98,6 +99,7 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             put(COLUMN_DISTANCE, distance)
             put(COLUMN_TIME, time)
             put(COLUMN_PACE, pace)
+            put(COLUMN_BACKEND_ID, backendId)
         }
         val sessionId = db.insert(TABLE_NAME, null, values)
         db.close()
@@ -204,8 +206,9 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
             val distance = cursor.getFloat(cursor.getColumnIndexOrThrow(COLUMN_DISTANCE))
             val time = cursor.getInt(cursor.getColumnIndexOrThrow(COLUMN_TIME))
             val pace = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_PACE))
+            val backendId = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_BACKEND_ID))
 
-            session = Session(id, track, name, distance, time, pace)
+            session = Session(id, track, name, distance, time, pace, backendId)
         }
 
         cursor.close() // Always close the cursor to avoid memory leaks

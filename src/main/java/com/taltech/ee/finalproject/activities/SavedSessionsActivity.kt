@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.activities
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -7,6 +7,8 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ListView
 import androidx.appcompat.app.AppCompatActivity
+import com.taltech.ee.finalproject.R
+import com.taltech.ee.finalproject.database.SessionsDatabaseHelper
 
 class SavedSessionsActivity : AppCompatActivity() {
     private lateinit var sessionsListView: ListView

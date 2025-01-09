@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.location
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -17,6 +17,8 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
+import com.taltech.ee.finalproject.backend.BackendHandler
+import com.taltech.ee.finalproject.R
 import org.json.JSONObject
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -31,6 +33,11 @@ class LocationService : Service() {
     // The desired intervals for location updates. Inexact. Updates may be more or less frequent.
     private val UPDATE_INTERVAL_IN_MILLISECONDS: Long = 2000
     private val FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2
+    private val MAX_ALLOWED_ACCURACY = 50.0f
+    private val FILTER_ALPHA = 0.2f
+
+    private var lastFilteredLocation: Location? = null
+
 
     private val broadcastReceiver = InnerBroadcastReceiver()
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
@@ -65,7 +72,7 @@ class LocationService : Service() {
     private var checkpoint = false
     private var waypoint = false
 
-    private var currentSessionIdBackend: String = ""
+    private var currentSessionIdBackend: String = "Empty"
 
 
     override fun onCreate() {
@@ -77,6 +84,7 @@ class LocationService : Service() {
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
         broadcastReceiverIntentFilter.addAction(C.LOCATION_UPDATE_ACTION)
         broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
+        broadcastReceiverIntentFilter.addAction(C.BACKEND_ID_UPDATE)
 
         registerReceiver(broadcastReceiver, broadcastReceiverIntentFilter)
         Log.d("pace", "registered broadcast")
@@ -177,42 +185,51 @@ class LocationService : Service() {
     private fun onNewLocation(location: Location) {
         Log.i(TAG, "New location: $location")
 
-        val maxAllowedDistance = 500.0f
+        val filteredLocation = smoothLocation(location)
+
+        Log.i(TAG, "Filtered location: $location")
+
+
+        val maxAllowedDistance = 50.0f
 
         if (currentLocation != null) {
-            val distance = location.distanceTo(currentLocation!!)
+            val distance = filteredLocation.distanceTo(currentLocation!!)
             Log.d(TAG, "Distance from previous location: $distance meters")
 
             if (distance > maxAllowedDistance) {
                 Log.w(TAG, "Location is too far away (${distance}m). Ignoring update.")
                 return
             }
-        }
+            if (location.accuracy > MAX_ALLOWED_ACCURACY) {
+                Log.w(TAG, "Location accuracy is too low: ${location.accuracy} meters. Ignoring update.")
+                return
+            }
 
-        postLocationToBackend(location, "00000000-0000-0000-0000-000000000001")
+        }
+        postLocationToBackend(filteredLocation, "00000000-0000-0000-0000-000000000001")
 
         if (currentLocation == null){
-            locationStart = location
-            locationCP = location
-            locationWP = location
+            locationStart = filteredLocation
+            locationCP = filteredLocation
+            locationWP = filteredLocation
         } else {
-            distanceOverallTotal += location.distanceTo(currentLocation!!)
+            distanceOverallTotal += filteredLocation.distanceTo(currentLocation!!)
             paceOverall = countPace(distanceOverallTotal, startTime)
             Log.d("PRC", "SERVICE: overall distance: $distanceOverallTotal")
             Log.d("PRC", "SERVICE: overall pace: $paceOverall")
 
 
             if (checkpoint) {
-                distanceCPDirect = location.distanceTo(locationCP!!)
-                distanceCPTotal += location.distanceTo(currentLocation!!)
+                distanceCPDirect = filteredLocation.distanceTo(locationCP!!)
+                distanceCPTotal += filteredLocation.distanceTo(currentLocation!!)
                 paceCP = countPace(distanceCPTotal, lastCheckpointTime)
                 Log.d("PRC", "SERVICE: CP distance: $distanceCPTotal")
                 Log.d("PRC", "SERVICE: CP pace: $paceCP")
             }
 
             if (waypoint) {
-                distanceWPDirect = location.distanceTo(locationWP!!)
-                distanceWPTotal += location.distanceTo(currentLocation!!)
+                distanceWPDirect = filteredLocation.distanceTo(locationWP!!)
+                distanceWPTotal += filteredLocation.distanceTo(currentLocation!!)
                 paceWP = countPace(distanceWPTotal, lastWaypointTime)
                 Log.d("PRC", "SERVICE: WP distance: $distanceWPTotal")
                 Log.d("PRC", "SERVICE: WP pace: $paceWP")
@@ -221,11 +238,11 @@ class LocationService : Service() {
 
         previousLocation?.let { prevLoc ->
             val prevLatLng = LatLng(prevLoc.latitude, prevLoc.longitude)
-            val currLatLng = LatLng(location.latitude, location.longitude)
+            val currLatLng = LatLng(filteredLocation.latitude, filteredLocation.longitude)
 
 
             // save the location for calculations
-            currentLocation = location
+            currentLocation = filteredLocation
 
             showNotification()
 
@@ -233,10 +250,10 @@ class LocationService : Service() {
             val intent = Intent(C.LOCATION_UPDATE_ACTION).apply {
                 putExtra("newPolyline", Pair(
                     LatLng(previousLocation?.latitude ?: 0.0, previousLocation?.longitude ?: 0.0),
-                    LatLng(location.latitude, location.longitude)
+                    LatLng(filteredLocation.latitude, filteredLocation.longitude)
                 ))
-                putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, location.latitude)
-                putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, location.longitude)
+                putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, filteredLocation.latitude)
+                putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, filteredLocation.longitude)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, distanceOverallTotal)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, distanceCPTotal)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, distanceWPTotal)
@@ -245,6 +262,7 @@ class LocationService : Service() {
                 putExtra(C.LOCATION_UPDATE_ACTION_PACE_WP, paceWP)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_DIRECT, distanceCPDirect)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_DIRECT, distanceWPDirect)
+                putExtra(C.BACKEND_ID_UPDATE, currentSessionIdBackend)
             }
 
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
@@ -254,6 +272,25 @@ class LocationService : Service() {
 
         previousLocation = location
 
+    }
+
+    private fun smoothLocation(newLocation: Location): Location {
+        if (lastFilteredLocation == null) {
+            lastFilteredLocation = newLocation
+            return newLocation
+        }
+
+        val smoothedLocation = Location(newLocation)
+        smoothedLocation.latitude = lastFilteredLocation!!.latitude +
+                FILTER_ALPHA * (newLocation.latitude - lastFilteredLocation!!.latitude)
+        smoothedLocation.longitude = lastFilteredLocation!!.longitude +
+                FILTER_ALPHA * (newLocation.longitude - lastFilteredLocation!!.longitude)
+        smoothedLocation.altitude = lastFilteredLocation!!.altitude +
+                FILTER_ALPHA * (newLocation.altitude - lastFilteredLocation!!.altitude)
+        smoothedLocation.accuracy = Math.min(lastFilteredLocation!!.accuracy, newLocation.accuracy)
+
+        lastFilteredLocation = smoothedLocation
+        return smoothedLocation
     }
 
     private fun countPace(countDistance: Float, timestamp: Long): Double {
@@ -445,7 +482,7 @@ class LocationService : Service() {
     }
 
     private fun postLocationToBackend(location: Location, locationTypeId: String) {
-        if (currentSessionIdBackend.isNullOrEmpty()) {
+        if (currentSessionIdBackend == "Empty") {
             Log.e(TAG, "Session ID is not initialized. Cannot post location.")
             return
         }

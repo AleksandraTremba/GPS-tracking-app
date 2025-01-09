@@ -11,11 +11,24 @@
         <item name="android:textColor">@color/colorTextDark</item>
         <item name="android:buttonStyle">@style/MyButtonDark</item>
         <item name="colorSurface">@color/colorCardBackground</item>
+        <item name="alertDialogTheme">@style/CustomAlertDialogTheme</item>
     </style>
 
     <style name="MyButtonDark">
         <item name="android:background">@color/colorButtonDark</item>
         <item name="android:textColor">@color/colorTextDark</item>
+    </style>
+
+    <style name="CustomAlertDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:background">@color/colorBackgroundDark</item>
+    </style>
+
+    <style name="CustomDialogTheme" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:background">@color/colorBackgroundDark</item>
+    </style>
+
+    <style name="OptionsDialog">
+        <item name="android:background">@color/colorBackgroundDark</item>
     </style>
 
 

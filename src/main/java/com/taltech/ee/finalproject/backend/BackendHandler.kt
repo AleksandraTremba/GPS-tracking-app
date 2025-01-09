@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.backend
 
 import android.content.Context
 import com.android.volley.toolbox.JsonObjectRequest
@@ -6,8 +6,10 @@ import org.json.JSONObject
 import com.android.volley.toolbox.Volley
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import android.location.Location
 import android.util.Log
+import com.android.volley.toolbox.JsonArrayRequest
+import org.json.JSONArray
+import org.json.JSONException
 
 
 object BackendHandler {
@@ -42,6 +44,7 @@ object BackendHandler {
             { response ->
                 Log.e("BCND", "Successfully created session.")
                 val sessionId = response.getString("id")
+                Log.d("SESSION ID","SESSION ID: $sessionId")
                 onSuccess(sessionId)
             },
             { error ->
@@ -175,5 +178,59 @@ object BackendHandler {
 
         Volley.newRequestQueue(context).add(request)
     }
+
+    fun fetchGpsLocations(
+        context: Context,
+        backendId: String,
+        onSuccess: (List<Map<String, Any>>) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        val url = "https://sportmap.akaver.com/api/v1/GpsLocations/Session/$backendId"
+        val sharedPreferences = context.getSharedPreferences("SportMapPrefs", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("token", null) ?: return onError("No JWT token found")
+
+        val request = object : JsonArrayRequest(
+            Method.GET, url, null,
+            { response ->
+                try {
+                    val locations = mutableListOf<Map<String, Any>>()
+                    for (i in 0 until response.length()) {
+                        val obj = response.getJSONObject(i)
+                        val location = mapOf(
+                            "id" to obj.getString("id"),
+                            "recordedAt" to obj.getString("recordedAt"),
+                            "latitude" to obj.getDouble("latitude"),
+                            "longitude" to obj.getDouble("longitude"),
+                            "accuracy" to obj.optDouble("accuracy", 0.0),
+                            "altitude" to obj.optDouble("altitude", 0.0),
+                            "verticalAccuracy" to obj.optDouble("verticalAccuracy", 0.0),
+                            "appUserId" to obj.optString("appUserId", ""),
+                            "gpsSessionId" to obj.getString("gpsSessionId"),
+                            "gpsLocationTypeId" to obj.optString("gpsLocationTypeId", "")
+                        )
+                        locations.add(location)
+                    }
+                    onSuccess(locations)
+                } catch (e: Exception) {
+                    Log.e("BCND", "Error parsing GPS locations: ${e.message}")
+                    onError("Error parsing GPS locations data")
+                }
+            },
+            { error ->
+                Log.e("BCND", "Error fetching GPS locations: ${error.message}")
+                onError(error.message ?: "Unknown error occurred")
+            }
+        ) {
+            override fun getHeaders(): Map<String, String> {
+                return mapOf(
+                    "Authorization" to "Bearer $token",
+                    "Content-Type" to "application/json"
+                )
+            }
+        }
+
+        Volley.newRequestQueue(context).add(request)
+    }
+
 
 }

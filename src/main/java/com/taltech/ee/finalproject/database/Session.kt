@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.database
 
 data class Session(
     val id: Long,
@@ -6,5 +6,6 @@ data class Session(
     val name: String,
     val distance: Float,
     val time: Int,
-    val pace: String
+    val pace: String,
+    val backendId: String
 )

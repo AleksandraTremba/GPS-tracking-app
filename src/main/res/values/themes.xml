@@ -17,5 +17,15 @@
         <item name="android:textColor">@color/colorText</item>
     </style>
 
+    <style name="CustomAlertDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:background">@color/colorBackground</item>
+    </style>
+
+    <style name="OptionsDialog">
+        <item name="android:background">@color/colorBackground</item>
+    </style>
+
+
+
     <style name="Theme.FinalProject" parent="Base.Theme.FinalProject" />
 </resources>

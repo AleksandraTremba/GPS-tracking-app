@@ -26,23 +26,25 @@
             android:value="@string/google_maps_key" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".activities.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SavedSessionsActivity">
+        <activity android:name=".activities.SavedSessionsActivity">
         </activity>
-        <activity android:name=".SessionMapActivity">
+        <activity android:name=".activities.SessionMapActivity">
         </activity>
-        <activity android:name=".AccountActivity">
+        <activity android:name=".activities.AccountActivity">
         </activity>
-        <activity android:name=".BackendHandler">
+        <activity android:name=".backend.BackendHandler">
+        </activity>
+        <activity android:name=".activities.InfoActivity">
         </activity>
 
-        <receiver android:name=".MainActivity$InnerBroadcastReceiver"
+        <receiver android:name=".activities.MainActivity$InnerBroadcastReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="C.LOCATION_UPDATE_ACTION" />
@@ -52,7 +54,7 @@
             </intent-filter>
         </receiver>
         <service
-            android:name=".LocationService"
+            android:name=".location.LocationService"
             android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="true"

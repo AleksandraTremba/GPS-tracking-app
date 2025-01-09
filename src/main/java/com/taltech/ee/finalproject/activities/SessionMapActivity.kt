@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.activities
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -17,6 +17,9 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
+import com.taltech.ee.finalproject.R
+import com.taltech.ee.finalproject.backend.BackendHandler
+import com.taltech.ee.finalproject.database.SessionsDatabaseHelper
 
 class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
     private var googleMap: GoogleMap? = null
@@ -48,6 +51,10 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         findViewById<Button>(R.id.export_button).setOnClickListener {
             sendSessionAsEmail()
+        }
+
+        findViewById<Button>(R.id.info_button).setOnClickListener {
+            displayInfo()
         }
     }
 
@@ -202,10 +209,75 @@ class SessionMapActivity : AppCompatActivity(), OnMapReadyCallback {
         finish() // Close activity after deletion
     }
 
+    private fun displayInfo() {
+        val dbHelper = SessionsDatabaseHelper(this)
+        val session = dbHelper.getSessionById(sessionId)
+        val messageList = mutableListOf<String>()
+
+        session?.let {
+            val backendId = it.backendId
+            if (backendId == "Empty") {
+                Toast.makeText(this, "Session created without login.", Toast.LENGTH_SHORT).show()
+                messageList.add("Session created without login.")
+            } else {
+                BackendHandler.fetchGpsLocations(
+                    context = this,
+                    backendId = backendId,
+                    onSuccess = { locations ->
+                        Log.d("INFO", "id: $backendId")
+
+                        locations.forEach { location ->
+                            val locationType = when (location["gpsLocationTypeId"]) {
+                                "00000000-0000-0000-0000-000000000001" -> "Location Update"
+                                "00000000-0000-0000-0000-000000000002" -> "Waypoint"
+                                "00000000-0000-0000-0000-000000000003" -> "Checkpoint"
+                                else -> "Unknown Type"
+                            }
+
+                            val formattedLocation = """
+                            Type: $locationType
+                            Recorded At: ${location["recordedAt"]}
+                            Latitude: ${location["latitude"]}
+                            Longitude: ${location["longitude"]}
+                            Accuracy: ${location["accuracy"]}
+                            Altitude: ${location["altitude"]}
+                            Vertical Accuracy: ${location["verticalAccuracy"]}
+                        """.trimIndent()
+                            messageList.add(formattedLocation)
+                        }
+
+                        // Start InfoActivity with the list of formatted messages
+                        val intent = Intent(this, InfoActivity::class.java).apply {
+                            putStringArrayListExtra("MESSAGE_LIST", ArrayList(messageList))
+                        }
+                        startActivity(intent)
+                    },
+                    onError = { error ->
+                        Log.e("KFC", "Error fetching locations: $error")
+                        messageList.add("Error fetching locations: $error")
+                        val intent = Intent(this, InfoActivity::class.java).apply {
+                            putStringArrayListExtra("MESSAGE_LIST", ArrayList(messageList))
+                        }
+                        startActivity(intent)
+                    }
+                )
+            }
+        } ?: run {
+            messageList.add("No session found.")
+            val intent = Intent(this, InfoActivity::class.java).apply {
+                putStringArrayListExtra("MESSAGE_LIST", ArrayList(messageList))
+            }
+            startActivity(intent)
+        }
+    }
+
+
+
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
 
         trackCoordinates?.let { drawPolyline(it) }
     }
+
 }
 

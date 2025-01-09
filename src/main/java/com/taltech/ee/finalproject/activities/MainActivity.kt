@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.activities
 
 import android.Manifest
 import android.app.Notification
@@ -40,7 +40,10 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.Polyline
 import com.google.android.gms.maps.model.PolylineOptions
 import com.google.android.material.snackbar.Snackbar
-import com.taltech.ee.finalproject.LocationService
+import com.taltech.ee.finalproject.location.C
+import com.taltech.ee.finalproject.location.LocationService
+import com.taltech.ee.finalproject.R
+import com.taltech.ee.finalproject.database.SessionsDatabaseHelper
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListener {
@@ -123,6 +126,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     private val orientation = FloatArray(3)
     private var isCompassOn = true
 
+    private var sessionIDBackend: String = "Empty"
+
 
 
     // ============================================== MAIN ENTRY - ONCREATE =============================================
@@ -143,6 +148,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         broadcastReceiverIntentFilter.addAction(C.ACTION_UPDATE_TRACKING)
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_CP)
         broadcastReceiverIntentFilter.addAction(C.NOTIFICATION_ACTION_WP)
+        broadcastReceiverIntentFilter.addAction(C.BACKEND_ID_UPDATE)
 
         elapsedTimeHandler = android.os.Handler(mainLooper)
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -511,9 +517,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     }
 
 
-    fun toggleMapCentering(isCentered: Boolean) {
+    fun toggleMapCentering(newCentered: Boolean) {
+        isCentered = newCentered
         val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
         sharedPreferences.edit().putBoolean("isCentered", isCentered).apply()
+
+        Log.d("DEBUG", "toggleMapCentering called with newCentered: $newCentered")
 
         if (isCentered) {
             centerMapOnCurrentLocation()
@@ -652,6 +661,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         totalPace = 0.0
         checkpointPace = 0.0
         waypointPace = 0.0
+        sessionIDBackend = "Empty"
     }
 
     private fun saveSessionData() {
@@ -674,7 +684,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
 
         // Insert session into the database
         val dbHelper = SessionsDatabaseHelper(this)
-        val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace)
+        val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace, sessionIDBackend)
 
         for ((marker, timestamp) in checkpointMarkers) {
             Log.d("DB", "${timestamp} saved in database")
@@ -787,6 +797,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
                     waypointPace = intent.getDoubleExtra(C.LOCATION_UPDATE_ACTION_PACE_WP, 0.0)
                     checkpointDirectDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_DIRECT, 0f)
                     waypointDirectDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_DIRECT, 0f)
+                    sessionIDBackend = intent.getStringExtra(C.BACKEND_ID_UPDATE).toString()
 
                     Log.d("PRC", "MAIN: broadcast recieved: distance = $totalDistance, " +
                         "CP distance = $checkpointDistance, CP distance direct = $checkpointDirectDistance")
@@ -801,6 +812,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
                     updateWaypointDistanceTextView()
                     updateWaypointPaceTextView()
                     if (isCentered) {
+                        Log.d("CENTER", "is centered: $isCentered")
                         centerMapOnCurrentLocation()
                     }
 

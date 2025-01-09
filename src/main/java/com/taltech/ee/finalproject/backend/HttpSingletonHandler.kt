@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.backend
 
 import android.content.Context
 import android.text.TextUtils
@@ -23,7 +23,7 @@ class HttpSingletonHandler {
     }
 
     constructor(context: Context) {
-        HttpSingletonHandler.context = context
+        Companion.context = context
     }
 
     val requestQueue: RequestQueue? = null

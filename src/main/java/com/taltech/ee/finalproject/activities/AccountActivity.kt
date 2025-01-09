@@ -1,4 +1,4 @@
-package com.taltech.ee.finalproject
+package com.taltech.ee.finalproject.activities
 
 import android.content.Context
 import android.os.Bundle
@@ -13,6 +13,8 @@ import com.android.volley.toolbox.Volley
 import org.json.JSONObject
 import com.android.volley.Request
 import com.android.volley.Response
+import com.taltech.ee.finalproject.backend.HttpSingletonHandler
+import com.taltech.ee.finalproject.R
 
 class AccountActivity : AppCompatActivity() {
     private val BASE_URL = "https://sportmap.akaver.com/api/v1.0/"
