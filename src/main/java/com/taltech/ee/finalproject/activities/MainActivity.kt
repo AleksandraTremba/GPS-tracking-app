@@ -635,15 +635,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         outState.putLong("lastWaypointTime", lastWaypointTime)
 
         // Save checkpoint markers
-        val checkpointData = checkpointMarkers.map { Pair(it.first.position, it.second) }
-        outState.putSerializable("checkpointMarkers", ArrayList(checkpointData))
+        val checkpointData = checkpointMarkers.map { pair ->
+            val position = pair.first.position
+            arrayOf(position.latitude, position.longitude, pair.second)
+        }
+        outState.putSerializable("checkpointMarkers", checkpointData.toTypedArray())
 
-        // Save waypoint markers
-        currentWaypointMarker?.let {
-            outState.putParcelable("currentWaypoint", it.position)
+        // Save waypoint data
+        currentWaypointMarker?.let { marker ->
+            val position = marker.position
+            outState.putDouble("currentWaypointLat", position.latitude)
+            outState.putDouble("currentWaypointLng", position.longitude)
             outState.putLong("currentWaypointTime", lastWaypointTime)
         }
-
         // Save polylines
         outState.putStringArrayList("track", ArrayList(track))
 
@@ -709,19 +713,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
 
     private fun restoreMapState(savedInstanceState: Bundle) {
         // Restore checkpoint markers
-        val checkpointData = savedInstanceState.getSerializable("checkpointMarkers") as? ArrayList<Pair<LatLng, Long>>
-        checkpointData?.forEach { (position, timestamp) ->
+        val checkpointData = savedInstanceState.getSerializable("checkpointMarkers") as? Array<Array<Any>>
+        checkpointData?.forEach { data ->
+            val lat = data[0] as Double
+            val lng = data[1] as Double
+            val timestamp = data[2] as Long
+            val position = LatLng(lat, lng)
             val marker = mMap.addMarker(MarkerOptions().position(position).title("Checkpoint"))
             marker?.let { checkpointMarkers.add(Pair(it, timestamp)) }
         }
 
-        // Restore waypoint marker
-        val waypointPosition = savedInstanceState.getParcelable<LatLng>("currentWaypoint")
-        if (waypointPosition != null) {
+        // Restore waypoint data
+        val waypointLat = savedInstanceState.getDouble("currentWaypointLat", 0.0)
+        val waypointLng = savedInstanceState.getDouble("currentWaypointLng", 0.0)
+        if (waypointLat != 0.0 && waypointLng != 0.0) {
+            val position = LatLng(waypointLat, waypointLng)
             currentWaypointMarker = mMap.addMarker(
-                MarkerOptions()
-                    .position(waypointPosition)
-                    .title("Waypoint")
+                MarkerOptions().position(position).title("Waypoint")
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN))
             )
             lastWaypointTime = savedInstanceState.getLong("currentWaypointTime", 0L)

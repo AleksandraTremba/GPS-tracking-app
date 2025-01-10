@@ -183,15 +183,10 @@ class LocationService : Service() {
     private fun onNewLocation(location: Location) {
         Log.i(TAG, "New location: $location")
 
-        val filteredLocation = smoothLocation(location)
-
-        Log.i(TAG, "Filtered location: $location")
-
-
-        val maxAllowedDistance = 50.0f
+        val maxAllowedDistance = 100.0f
 
         if (currentLocation != null) {
-            val distance = filteredLocation.distanceTo(currentLocation!!)
+            val distance = location.distanceTo(currentLocation!!)
             Log.d(TAG, "Distance from previous location: $distance meters")
 
             if (distance > maxAllowedDistance) {
@@ -204,30 +199,30 @@ class LocationService : Service() {
             }
 
         }
-        postLocationToBackend(filteredLocation, "00000000-0000-0000-0000-000000000001")
+        postLocationToBackend(location, "00000000-0000-0000-0000-000000000001")
 
         if (currentLocation == null){
-            locationStart = filteredLocation
-            locationCP = filteredLocation
-            locationWP = filteredLocation
+            locationStart = location
+            locationCP = location
+            locationWP = location
         } else {
-            distanceOverallTotal += filteredLocation.distanceTo(currentLocation!!)
+            distanceOverallTotal += location.distanceTo(currentLocation!!)
             paceOverall = countPace(distanceOverallTotal, startTime)
             Log.d("PRC", "SERVICE: overall distance: $distanceOverallTotal")
             Log.d("PRC", "SERVICE: overall pace: $paceOverall")
 
 
             if (checkpoint) {
-                distanceCPDirect = filteredLocation.distanceTo(locationCP!!)
-                distanceCPTotal += filteredLocation.distanceTo(currentLocation!!)
+                distanceCPDirect = location.distanceTo(locationCP!!)
+                distanceCPTotal += location.distanceTo(currentLocation!!)
                 paceCP = countPace(distanceCPTotal, lastCheckpointTime)
                 Log.d("PRC", "SERVICE: CP distance: $distanceCPTotal")
                 Log.d("PRC", "SERVICE: CP pace: $paceCP")
             }
 
             if (waypoint) {
-                distanceWPDirect = filteredLocation.distanceTo(locationWP!!)
-                distanceWPTotal += filteredLocation.distanceTo(currentLocation!!)
+                distanceWPDirect = location.distanceTo(locationWP!!)
+                distanceWPTotal += location.distanceTo(currentLocation!!)
                 paceWP = countPace(distanceWPTotal, lastWaypointTime)
                 Log.d("PRC", "SERVICE: WP distance: $distanceWPTotal")
                 Log.d("PRC", "SERVICE: WP pace: $paceWP")
@@ -236,11 +231,11 @@ class LocationService : Service() {
 
         previousLocation?.let { prevLoc ->
             val prevLatLng = LatLng(prevLoc.latitude, prevLoc.longitude)
-            val currLatLng = LatLng(filteredLocation.latitude, filteredLocation.longitude)
+            val currLatLng = LatLng(location.latitude, location.longitude)
 
 
             // save the location for calculations
-            currentLocation = filteredLocation
+            currentLocation = location
 
             showNotification()
 
@@ -248,10 +243,10 @@ class LocationService : Service() {
             val intent = Intent(C.LOCATION_UPDATE_ACTION).apply {
                 putExtra("newPolyline", Pair(
                     LatLng(previousLocation?.latitude ?: 0.0, previousLocation?.longitude ?: 0.0),
-                    LatLng(filteredLocation.latitude, filteredLocation.longitude)
+                    LatLng(location.latitude, location.longitude)
                 ))
-                putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, filteredLocation.latitude)
-                putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, filteredLocation.longitude)
+                putExtra(C.LOCATION_UPDATE_ACTION_LATITUDE, location.latitude)
+                putExtra(C.LOCATION_UPDATE_ACTION_LONGITUDE, location.longitude)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_OVERALL_TOTAL, distanceOverallTotal)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_CP_TOTAL, distanceCPTotal)
                 putExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_TOTAL, distanceWPTotal)
