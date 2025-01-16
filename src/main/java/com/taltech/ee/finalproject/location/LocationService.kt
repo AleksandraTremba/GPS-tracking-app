@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.Log
 import android.widget.RemoteViews
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -109,6 +110,17 @@ class LocationService : Service() {
         requestLocationUpdates()
 
     }
+
+    fun resumeSession(
+        sessionIDBackend: String,
+    ) {
+        this.currentSessionIdBackend = sessionIDBackend
+
+        isTracking = true
+        showNotification()
+        Log.d("FUCK", "Session resumed with ID: $sessionIDBackend")
+    }
+
 
     fun requestLocationUpdates() {
         Log.i(TAG, "Requesting location updates")
@@ -267,25 +279,6 @@ class LocationService : Service() {
 
     }
 
-    private fun smoothLocation(newLocation: Location): Location {
-        if (lastFilteredLocation == null) {
-            lastFilteredLocation = newLocation
-            return newLocation
-        }
-
-        val smoothedLocation = Location(newLocation)
-        smoothedLocation.latitude = lastFilteredLocation!!.latitude +
-                FILTER_ALPHA * (newLocation.latitude - lastFilteredLocation!!.latitude)
-        smoothedLocation.longitude = lastFilteredLocation!!.longitude +
-                FILTER_ALPHA * (newLocation.longitude - lastFilteredLocation!!.longitude)
-        smoothedLocation.altitude = lastFilteredLocation!!.altitude +
-                FILTER_ALPHA * (newLocation.altitude - lastFilteredLocation!!.altitude)
-        smoothedLocation.accuracy = Math.min(lastFilteredLocation!!.accuracy, newLocation.accuracy)
-
-        lastFilteredLocation = smoothedLocation
-        return smoothedLocation
-    }
-
     private fun countPace(countDistance: Float, timestamp: Long): Double {
         val distance = countDistance / 1000.0
         Log.d("pace", "distance: $distance, start time: $startTime")
@@ -351,24 +344,34 @@ class LocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d(TAG, "onStartCommand")
+        val sessionID = intent?.getStringExtra("sessionIDBackend")
+        val totalDistance = intent?.getFloatExtra("totalDistance", 0f)
 
-        // set counters and locations to 0/null
-        currentLocation = null
-        locationStart = null
-        locationCP = null
-        locationWP = null
+        if (sessionID != "Empty" && sessionID != null) {
+            Log.d("FUCK", "LocationService session continues with id: $sessionID and distance: $totalDistance")
+            resumeSession(sessionID)
+            // Use totalDistance as needed, for example:
+            if (totalDistance != null) {
+                distanceOverallTotal = totalDistance
+            }
+        } else {
+            // New session initialization
+            currentLocation = null
+            locationStart = null
+            locationCP = null
+            locationWP = null
 
-        distanceOverallTotal = 0f
-        distanceCPTotal = 0f
-        distanceWPTotal = 0f
-
+            distanceOverallTotal = 0f
+            distanceCPTotal = 0f
+            distanceWPTotal = 0f
+        }
 
         showNotification()
 
         return START_STICKY
-        //return super.onStartCommand(intent, flags, startId)
     }
+
+
 
     override fun onBind(intent: Intent?): IBinder? {
         Log.d(TAG, "onBind")
@@ -467,11 +470,14 @@ class LocationService : Service() {
             onSuccess = { sessionId ->
                 Log.d("BCND", "Session started with ID: $sessionId")
                 currentSessionIdBackend = sessionId
+                Log.d("FUCK", "LocaionService started with id: $currentSessionIdBackend")
             },
             onError = { error ->
                 Log.e("BCND", "Failed to start session: $error")
             }
         )
+
+
     }
 
     private fun postLocationToBackend(location: Location, locationTypeId: String) {

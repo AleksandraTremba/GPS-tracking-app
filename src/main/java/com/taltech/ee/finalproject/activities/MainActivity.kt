@@ -1,6 +1,7 @@
 package com.taltech.ee.finalproject.activities
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
@@ -21,6 +23,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.View
+import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
@@ -45,7 +48,6 @@ import com.taltech.ee.finalproject.location.C
 import com.taltech.ee.finalproject.location.LocationService
 import com.taltech.ee.finalproject.R
 import com.taltech.ee.finalproject.database.SessionsDatabaseHelper
-import com.taltech.ee.finalproject.location.LocationService.Companion
 
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListener {
@@ -56,6 +58,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
 
     private val broadcastReceiver = InnerBroadcastReceiver()
     private val broadcastReceiverIntentFilter: IntentFilter = IntentFilter()
+
+    private lateinit var sharedPreferences: SharedPreferences
 
 
     private var locationServiceActive = false
@@ -136,6 +140,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
 
 
     // ============================================== MAIN ENTRY - ONCREATE =============================================
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate")
         super.onCreate(savedInstanceState)
@@ -159,7 +164,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        val sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
         isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
         isCentered = sharedPreferences.getBoolean("isCentered", false)
         isSatelliteView = sharedPreferences.getBoolean("isSatelliteView", true)
@@ -200,6 +205,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
             dialogFragment.show(supportFragmentManager, "options_dialog")
         }
 
+        var sessionButton = findViewById<Button>(R.id.continue_session_button)
+        sessionButton.setOnClickListener {
+            loadLastSession()
+        }
+
         val isNorthUp = sharedPreferences.getBoolean("isNorthUp", true)
 
         orientationTextView = findViewById(R.id.orientation)
@@ -215,7 +225,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         toggleCompass(isCompassOn)
 
 
-
 //        val intentFilter = IntentFilter().apply {
 //            addAction(C.LOCATION_UPDATE_ACTION)
 //            addAction(C.ACTION_UPDATE_TRACKING)
@@ -225,6 +234,99 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     }
 
     // ============================================== MAP =============================================
+    private fun loadLastSession() {
+
+        val sessionIDBackend = getSavedSessionID()
+        if (sessionIDBackend == "Empty") {
+            return
+        }
+        val distance = getDistancesFromStorage()
+
+        Log.d("FUCK", "MAIN: Loaded session with id: $sessionIDBackend and distance: $distance")
+
+        if (sessionIDBackend != null && distance != null) {
+            val intent = Intent(this, LocationService::class.java).apply {
+                putExtra("sessionIDBackend", sessionIDBackend)
+                putExtra("totalDistance", distance)
+            }
+
+            startService(intent)
+            locationServiceActive = true
+            Log.d(TAG, "LocationService started to resume session with ID: $sessionIDBackend")
+        } else {
+            Log.e(TAG, "Failed to load last session. Missing data.")
+        }
+
+        val dbHelper = SessionsDatabaseHelper(this)
+
+        // Retrieve trackpoints without a session ID
+        val unsavedTrackPoints = dbHelper.getUnsavedTrackPoints()
+        val unsavedCheckpoints = dbHelper.getUnsavedCheckpoints()
+
+        Log.d("FUCK", "Unsaved checkpoints: ${unsavedCheckpoints.size}")
+        Log.d("FUCK", "Unsaved trackpoints: ${unsavedTrackPoints.size}")
+
+
+        // Clear any existing map data before loading
+        polylines.forEach { it.remove() }
+        polylines.clear()
+
+        checkpointMarkers.forEach { (marker, _) -> marker.remove() }
+        checkpointMarkers.clear()
+
+        // Plot trackpoints on the map
+        var previousLatLng: LatLng? = null
+        for (point in unsavedTrackPoints) {
+            val latLng = LatLng(point.latitude, point.longitude)
+            trackPoints.add(listOf(point.latitude, point.longitude, point.timestamp))
+
+            if (previousLatLng != null) {
+                val polyline = mMap.addPolyline(
+                    PolylineOptions().add(previousLatLng, latLng).color(Color.BLUE).width(5f)
+                )
+                polylines.add(polyline)
+                track.add("${previousLatLng.latitude},${previousLatLng.longitude},${latLng.latitude},${latLng.longitude}")
+            }
+
+            previousLatLng = latLng
+        }
+
+        for (checkpoint in unsavedCheckpoints) {
+            Log.d("FUCK", "Checkpoint: ${checkpoint.latitude}, ${checkpoint.longitude}, ${checkpoint.timestamp}")
+            val latLng = LatLng(checkpoint.latitude, checkpoint.longitude)
+            val markerOptions = MarkerOptions()
+                .position(latLng)
+                .title("Checkpoint")
+                .snippet("Lat: ${checkpoint.latitude}, Lng: ${checkpoint.longitude}")
+            val marker = mMap.addMarker(markerOptions)
+
+            marker?.let {
+                checkpointMarkers.add(Pair(it, checkpoint.timestamp))
+            }
+        }
+
+        // Update app state to reflect loaded session
+        isTracking = true
+        startTime = unsavedTrackPoints.minOfOrNull { it.timestamp } ?: System.currentTimeMillis()
+        startStopButton.setImageResource(R.drawable.pause)
+
+        // Resume tracking
+        elapsedTimeHandler.postDelayed(updateElapsedTimeRunnable, 1000)
+
+        Toast.makeText(this, "Previous session loaded successfully.", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun getSavedSessionID(): String? {
+        return sharedPreferences.getString("SESSION_ID", null)
+    }
+
+    private fun getDistancesFromStorage(): Float {
+        return sharedPreferences.getFloat("DISTANCE_OVERALL", 0f)
+    }
+
+    private fun getStartTimeFromStorage(): Long {
+        return sharedPreferences.getLong("START_TIME", 0L)
+    }
 
 
     // ============================================== LIFECYCLE CALLBACKS =============================================
@@ -448,6 +550,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
 
         lastCheckpoint = checkpointMarkerOptions
         lastCheckpointTime = timestamp
+
+        val dbHelper = SessionsDatabaseHelper(this)
+        dbHelper.insertCheckpoint(null, currentLat, currentLong, lastCheckpointTime)
         Log.d("DB", "Checkpoint added: $latLng at $timestamp")
     }
 
@@ -772,6 +877,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     private fun startTracking() {
         isTracking = true
         startTime = System.currentTimeMillis()
+        sharedPreferences.edit().putLong("START_TIME", startTime).apply()
         startstopLocationService()
         Log.d("PRC", "MAIN: started tracking")
         startStopButton.setImageResource(R.drawable.pause)
@@ -797,10 +903,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         polylines.clear()
         mPolyline?.remove()
 
-
         checkpointMarkers.forEach { (marker, _) ->
             marker.remove()
         }
+
+        Log.d("FUCK", "Cleared existing map data. Polylines: ${polylines.size}, Checkpoints: ${checkpointMarkers.size}")
+
 
         checkpointMarkers.clear()  // Clear the list of checkpoint markers
 
@@ -827,8 +935,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
     private fun saveSessionData() {
         val savedTrack = track.joinToString(";")
 
+        val starttime = sharedPreferences.getLong("START_TIME", 0L)
+
         val distanceInKm = totalDistance / 1000  // Convert to kilometers
-        val elapsedTime = System.currentTimeMillis() - startTime  // Time in milliseconds
+        val elapsedTime = System.currentTimeMillis() - starttime  // Time in milliseconds
 
         val pace = if (totalDistance > 0) {
             val time = elapsedTime / 1000f
@@ -846,25 +956,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         val dbHelper = SessionsDatabaseHelper(this)
         val sessionId = dbHelper.insertSession(savedTrack, distanceInKm.toFloat(), elapsedTime, pace, sessionIDBackend)
 
-        for ((marker, timestamp) in checkpointMarkers) {
-            Log.d("DB", "$marker, ${timestamp} saved in database")
-            if (marker.position.latitude != 0.0 && marker.position.longitude != 0.0) {
-                val latitude = marker.position.latitude
-                val longitude = marker.position.longitude
-                dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
-            }
-        }
+        dbHelper.updateSessionIdForTrackPointsAndCheckpoints(-1, sessionId)
 
-        for (point in trackPoints) {
-            val latitude = point[0] as Double
-            val longitude = point[1] as Double
-            val timestamp = point[2] as Long
-
-            if (latitude != 0.0 || longitude != 0.0) {
-                dbHelper.insertTrackPoint(sessionId, latitude, longitude, timestamp)
-            }
-        }
-
+//        for ((marker, timestamp) in checkpointMarkers) {
+//            Log.d("DB", "$marker, ${timestamp} saved in database")
+//            if (marker.position.latitude != 0.0 && marker.position.longitude != 0.0) {
+//                val latitude = marker.position.latitude
+//                val longitude = marker.position.longitude
+//                dbHelper.insertCheckpoint(sessionId, latitude, longitude, timestamp)
+//            }
+//        }
+//
+//        for (point in trackPoints) {
+//            val latitude = point[0] as Double
+//            val longitude = point[1] as Double
+//            val timestamp = point[2] as Long
+//
+//            if (latitude != 0.0 || longitude != 0.0) {
+//                dbHelper.insertTrackPoint(sessionId, latitude, longitude, timestamp)
+//            }
+//        }
 
         Toast.makeText(this, "Session and checkpoints saved.", Toast.LENGTH_SHORT).show()
     }
@@ -948,6 +1059,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
         Log.d(TAG, "Interval is now: $updateInterval")
     }
 
+    fun insertTrackpoint(lat: Double, long: Double, currentTime: Long) {
+        if (lat == 0.0 && long == 0.0) return
+        val dbHelper = SessionsDatabaseHelper(this)
+        dbHelper.insertTrackPoint(null, lat, long, currentTime)
+    }
+
     // ============================================== BROADCAST RECEIVER =============================================
     private inner class InnerBroadcastReceiver: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -968,9 +1085,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, SensorEventListene
                     waypointDirectDistance = intent.getFloatExtra(C.LOCATION_UPDATE_ACTION_DISTANCE_WP_DIRECT, 0f)
                     sessionIDBackend = intent.getStringExtra(C.BACKEND_ID_UPDATE).toString()
 
+                    sharedPreferences.edit().putString("SESSION_ID", sessionIDBackend).apply()
+
+                    sharedPreferences.edit().putFloat("DISTANCE_OVERALL", totalDistance).apply()
+
+
                     Log.d("PRC", "MAIN: broadcast recieved: distance = $totalDistance, " +
                         "CP distance = $checkpointDistance, CP distance direct = $checkpointDirectDistance")
 
+                    insertTrackpoint(currentLat, currentLong, currentTime)
 
                     val newPolyline = intent.getSerializableExtra("newPolyline") as? Pair<LatLng, LatLng>
 

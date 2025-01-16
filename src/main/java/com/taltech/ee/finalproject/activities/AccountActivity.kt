@@ -94,8 +94,8 @@ class AccountActivity : AppCompatActivity() {
     }
 
     private fun loadRandomCat(imageButton: ImageButton) {
-        // Add a random query parameter to ensure a fresh image is loaded
-        val url = "https://cataas.com/cat?random=${System.currentTimeMillis()}"
+        val randomQuery = System.currentTimeMillis()
+        val url = "https://cataas.com/cat?random=$randomQuery"
 
         Picasso.get()
             .load(url)
@@ -103,14 +103,20 @@ class AccountActivity : AppCompatActivity() {
             .into(imageButton, object : Callback {
                 override fun onSuccess() {
                     // Successfully loaded the image
+                    Log.d("CAT_LOAD_SUCCESS", "Cat image loaded successfully: $url")
                 }
 
                 override fun onError(e: Exception?) {
-                    Log.e("CAT_LOAD_ERROR", "Failed to load cat", e)
-                    Toast.makeText(this@AccountActivity, "Failed to load cat", Toast.LENGTH_SHORT).show()
+                    Log.e("CAT_LOAD_ERROR", "Failed to load cat from URL: $url", e)
+                    Toast.makeText(
+                        this@AccountActivity,
+                        "Unable to load a cat image.",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
     }
+
 
 
 

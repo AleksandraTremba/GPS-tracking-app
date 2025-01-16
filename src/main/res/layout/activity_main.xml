@@ -42,6 +42,17 @@
             android:layout_weight="1"/>
 
         <!-- Options Button -->
+
+        <Button
+            android:id="@+id/continue_session_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/roundcorner"
+            android:scaleType="centerInside"
+            android:layout_margin="5dp"
+            android:text="Continue"
+            app:tint="@color/white" />
+
         <ImageButton
             android:id="@+id/options_button"
             android:src="@drawable/menu"

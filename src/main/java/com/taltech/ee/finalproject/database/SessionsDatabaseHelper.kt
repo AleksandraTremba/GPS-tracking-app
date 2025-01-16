@@ -8,6 +8,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.taltech.ee.finalproject.activities.MainActivity
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -107,10 +108,10 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
     }
 
 
-    fun insertCheckpoint(sessionId: Long, latitude: Double, longitude: Double, timestamp: Long) {
+    fun insertCheckpoint(sessionId: Long?, latitude: Double, longitude: Double, timestamp: Long) {
         val db = writableDatabase
         val values = ContentValues().apply {
-            put(COLUMN_SESSION_ID, sessionId)
+            put(COLUMN_SESSION_ID, sessionId ?: -1)
             put(COLUMN_LATITUDE, latitude)
             put(COLUMN_LONGITUDE, longitude)
             put(COLUMN_TIMESTAMP, timestamp)
@@ -119,17 +120,40 @@ class SessionsDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATAB
         db.close()
     }
 
-    fun insertTrackPoint(sessionId: Long, latitude: Double, longitude: Double, timestamp: Long) {
+    fun insertTrackPoint(sessionId: Long?, latitude: Double, longitude: Double, timestamp: Long) {
         val db = writableDatabase
-        val values = ContentValues().apply {
-            put(COLUMN_SESSION_ID, sessionId)
-            put(COLUMN_TRACK_LATITUDE, latitude)
-            put(COLUMN_TRACK_LONGITUDE, longitude)
-            put(COLUMN_TRACK_TIMESTAMP, timestamp)
+        if (latitude != 0.0 && longitude != 0.0) {
+            val values = ContentValues().apply {
+                put(COLUMN_SESSION_ID, sessionId ?: -1) // Use placeholder if sessionId is null
+                put(COLUMN_TRACK_LATITUDE, latitude)
+                put(COLUMN_TRACK_LONGITUDE, longitude)
+                put(COLUMN_TRACK_TIMESTAMP, timestamp)
+            }
+            db.insert(TABLE_TRACK_POINTS, null, values)
+            db.close()
         }
-        db.insert(TABLE_TRACK_POINTS, null, values)
+    }
+
+
+    fun updateSessionIdForTrackPointsAndCheckpoints(oldSessionId: Long, newSessionId: Long) {
+        val db = writableDatabase
+        val trackValues = ContentValues().apply { put(COLUMN_SESSION_ID, newSessionId) }
+        val checkpointValues = ContentValues().apply { put(COLUMN_SESSION_ID, newSessionId) }
+
+        db.update(TABLE_TRACK_POINTS, trackValues, "$COLUMN_SESSION_ID = ?", arrayOf(oldSessionId.toString()))
+        db.update(TABLE_CHECKPOINTS, checkpointValues, "$COLUMN_SESSION_ID = ?", arrayOf(oldSessionId.toString()))
         db.close()
     }
+
+    fun getUnsavedTrackPoints(): List<TrackPoint> {
+        return getTrackPointsForSession(-1)
+    }
+
+    fun getUnsavedCheckpoints(): List<Checkpoint> {
+        return getCheckpointsForSession(-1)
+    }
+
+
 
     @SuppressLint("Range")
     fun getTrackPointsForSession(sessionId: Long): List<TrackPoint> {
