@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="20dp"
+        style="@style/OptionsDialog">
+
+        <Button
+            android:id="@+id/orientation_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="North-Up" />
+
+        <Button
+            android:id="@+id/centered_map_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Keep map constantly centered" />
+
+        <Button
+            android:id="@+id/satellite_view_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sattelite view" />
+
+        <Button
+            android:id="@+id/compass_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Compass view" />
+
+        <Button
+            android:id="@+id/interval_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Change GPS update interval" />
+
+        <Button
+            android:id="@+id/saved_sessions_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Saved Sessions" />
+
+        <Button
+            android:id="@+id/account_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Account" />
+
+    </LinearLayout>
+</ScrollView>

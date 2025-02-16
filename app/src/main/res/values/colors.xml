@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="colorBackground">#F4F6FF</color>
+    <color name="colorText">#4A628A</color>
+    <color name="colorButton">#4A628A</color>
+    <color name="colorButtonGrid">#7AB2D3</color>
+
+    <color name="colorBackgroundDark">#111014</color>
+    <color name="colorTextDark">#c5c9e5</color>
+    <color name="colorButtonDark">#252942</color>
+    <color name="colorButtonGridDark">#535C91</color>
+
+    <color name="colorCardBackground">#d3e5f0</color>
+    <color name="colorCardBackgroundDark">#535C91</color>
+
+</resources>

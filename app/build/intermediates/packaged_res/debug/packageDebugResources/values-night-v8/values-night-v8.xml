@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Base.Theme.FinalProject" parent="Theme.Material3.DayNight.NoActionBar">
+        
+        
+        <item name="android:windowBackground">@color/colorBackgroundDark</item>
+        <item name="colorPrimary">@color/colorButtonDark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/colorButtonGridDark</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:textColor">@color/colorTextDark</item>
+        <item name="android:buttonStyle">@style/MyButtonDark</item>
+        <item name="colorSurface">@color/colorCardBackground</item>
+        <item name="alertDialogTheme">@style/CustomAlertDialogTheme</item>
+    </style>
+    <style name="CustomAlertDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:background">@color/colorBackgroundDark</item>
+    </style>
+    <style name="CustomDialogTheme" parent="Theme.Material3.DayNight.Dialog">
+        <item name="android:background">@color/colorBackgroundDark</item>
+    </style>
+    <style name="MyButtonDark">
+        <item name="android:background">@color/colorButtonDark</item>
+        <item name="android:textColor">@color/colorTextDark</item>
+    </style>
+    <style name="OptionsDialog">
+        <item name="android:background">@color/colorBackgroundDark</item>
+    </style>
+</resources>

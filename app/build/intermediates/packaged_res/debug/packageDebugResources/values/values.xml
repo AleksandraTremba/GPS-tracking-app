@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="colorBackground">#F4F6FF</color>
+    <color name="colorBackgroundDark">#111014</color>
+    <color name="colorButton">#4A628A</color>
+    <color name="colorButtonDark">#252942</color>
+    <color name="colorButtonGrid">#7AB2D3</color>
+    <color name="colorButtonGridDark">#535C91</color>
+    <color name="colorCardBackground">#d3e5f0</color>
+    <color name="colorCardBackgroundDark">#535C91</color>
+    <color name="colorText">#4A628A</color>
+    <color name="colorTextDark">#c5c9e5</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="app_name">Final Project</string>
+    <string name="google_maps_key" templateMergeStrategy="preserve" translatable="false">AIzaSyC4o9pVv5cN8spA2MKYIKUof7WKOIAebTU</string>
+    <style name="Base.Theme.FinalProject" parent="Theme.Material3.DayNight.NoActionBar">
+        
+        
+        <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="colorPrimary">@color/colorButton</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/colorButtonGrid</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:textColor">@color/colorText</item>
+        <item name="android:buttonStyle">@style/MyButton</item>
+    </style>
+    <style name="CustomAlertDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:background">@color/colorBackground</item>
+    </style>
+    <style name="MyButton">
+        <item name="android:background">@color/colorButton</item>
+        <item name="android:textColor">@color/colorText</item>
+    </style>
+    <style name="OptionsDialog">
+        <item name="android:background">@color/colorBackground</item>
+    </style>
+    <style name="Theme.FinalProject" parent="Base.Theme.FinalProject"/>
+</resources>

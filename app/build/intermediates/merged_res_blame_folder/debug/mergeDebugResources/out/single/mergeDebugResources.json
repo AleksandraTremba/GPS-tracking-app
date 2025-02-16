@@ -1,0 +1,198 @@
+[
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_ic_waypoint.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\ic_waypoint.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_popup_window.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\popup_window.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_compass_arrow.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\compass_arrow.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-mdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-mdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xhdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-mdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-mdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-anydpi_ic_launcher.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-anydpi\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_ic_checkpoint.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\ic_checkpoint.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_menu.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\menu.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_info.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_info.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xhdpi_ic_launcher_foreground.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xhdpi\\ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xxhdpi_ic_launcher_foreground.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xxhdpi\\ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_notification_layout.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\notification_layout.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_play.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\play.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout-land_activity_session_map.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout-land\\activity_session_map.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_account_log_in.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\account_log_in.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\xml_data_extraction_rules.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\xml\\data_extraction_rules.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_pause.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\pause.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-mdpi_ic_launcher_foreground.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-mdpi\\ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_menu1.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\menu1.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_options.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_options.xml"
+    },
+    {
+        "merged": "com.taltech.ee.finalproject.app-debug-36:/layout_activity_saved_sessions.xml.flat",
+        "source": "com.taltech.ee.finalproject.app-main-38:/layout/activity_saved_sessions.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_roundcorner.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\roundcorner.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-anydpi_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-anydpi\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xxxhdpi_ic_launcher_foreground.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xxxhdpi\\ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_register.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_register.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xxxhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xxxhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\xml_file_paths.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\xml\\file_paths.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_saved_sessions.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_saved_sessions.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_sessions_list_view.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\sessions_list_view.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-hdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-hdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_ic_launcher_background.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\ic_launcher_background.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_icon.png.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\icon.png"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xxhdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xxhdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_account.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_account.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout-land_activity_main.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout-land\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-hdpi_ic_launcher_round.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-hdpi\\ic_launcher_round.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xxhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xxhdpi\\ic_launcher.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-hdpi_ic_launcher_foreground.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-hdpi\\ic_launcher_foreground.webp"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\xml_backup_rules.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\xml\\backup_rules.xml"
+    },
+    {
+        "merged": "com.taltech.ee.finalproject.app-debug-36:/layout_dialog_update_session.xml.flat",
+        "source": "com.taltech.ee.finalproject.app-main-38:/layout/dialog_update_session.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_logged_in.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_logged_in.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\layout_activity_session_map.xml.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\layout\\activity_session_map.xml"
+    },
+    {
+        "merged": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-debug-36:\\mipmap-xxxhdpi_ic_launcher.webp.flat",
+        "source": "C:\\Users\\aleks\\.gradle\\daemon\\8.7\\com.taltech.ee.finalproject.app-main-38:\\mipmap-xxxhdpi\\ic_launcher.webp"
+    }
+]

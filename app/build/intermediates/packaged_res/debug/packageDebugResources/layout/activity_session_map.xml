@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/session_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Session"
+        android:textSize="20sp" />
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/saved_session_map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp" />
+
+    <TextView
+        android:id="@+id/saved_sessions_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Session"
+        android:textSize="20sp" />
+
+    <Button
+        android:id="@+id/rename_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Rename Session" />
+
+    <Button
+        android:id="@+id/info_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Info about the Session"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/export_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Export Session"
+        android:layout_marginTop="16dp"/>
+
+    <Button
+        android:id="@+id/delete_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Delete Session"
+        android:layout_marginTop="16dp" />
+
+</LinearLayout>

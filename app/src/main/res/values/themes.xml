@@ -1,0 +1,31 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.FinalProject" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="colorPrimary">@color/colorButton</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/colorButtonGrid</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:textColor">@color/colorText</item>
+        <item name="android:buttonStyle">@style/MyButton</item>
+    </style>
+
+    <style name="MyButton">
+        <item name="android:background">@color/colorButton</item>
+        <item name="android:textColor">@color/colorText</item>
+    </style>
+
+    <style name="CustomAlertDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:background">@color/colorBackground</item>
+    </style>
+
+    <style name="OptionsDialog">
+        <item name="android:background">@color/colorBackground</item>
+    </style>
+
+
+
+    <style name="Theme.FinalProject" parent="Base.Theme.FinalProject" />
+</resources>

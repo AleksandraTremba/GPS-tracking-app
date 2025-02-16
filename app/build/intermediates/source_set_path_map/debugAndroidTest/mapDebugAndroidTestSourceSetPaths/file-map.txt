@@ -1,0 +1,6 @@
+com.taltech.ee.finalproject.test.app-core-1.6.1-0 C:\Users\aleks\.gradle\caches\transforms-4\9dc03d2d021283e2482361a5bfbf901d\transformed\core-1.6.1\res
+com.taltech.ee.finalproject.test.app-tracing-1.2.0-1 C:\Users\aleks\.gradle\caches\transforms-4\cf75cbe5f48763f76aab464074a60900\transformed\tracing-1.2.0\res
+com.taltech.ee.finalproject.test.app-androidTest-2 C:\Users\aleks\AndroidStudioProjects\FinalProject\app\build\generated\res\resValues\androidTest\debug
+com.taltech.ee.finalproject.test.app-mergeDebugAndroidTestResources-3 C:\Users\aleks\AndroidStudioProjects\FinalProject\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.taltech.ee.finalproject.test.app-mergeDebugAndroidTestResources-4 C:\Users\aleks\AndroidStudioProjects\FinalProject\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.taltech.ee.finalproject.test.app-debugAndroidTest-5 C:\Users\aleks\AndroidStudioProjects\FinalProject\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources
